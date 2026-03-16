@@ -584,6 +584,27 @@ routing.layer("ProviderServiceLive routing", (it) => {
     }),
   );
 
+  it.effect(
+    "refreshes rate limits through any live session when the thread binding is missing",
+    () =>
+      Effect.gen(function* () {
+        const provider = yield* ProviderService;
+        yield* routing.codex.stopAll();
+
+        const session = yield* provider.startSession(asThreadId("thread-live"), {
+          provider: "codex",
+          threadId: asThreadId("thread-live"),
+          runtimeMode: "full-access",
+        });
+        routing.codex.refreshRateLimits.mockClear();
+
+        yield* provider.refreshRateLimits(asThreadId("thread-without-binding"));
+
+        assert.equal(routing.codex.refreshRateLimits.mock.calls.length, 1);
+        assert.deepEqual(routing.codex.refreshRateLimits.mock.calls[0], [session.threadId]);
+      }),
+  );
+
   it.effect("lists no sessions after adapter runtime clears", () =>
     Effect.gen(function* () {
       const provider = yield* ProviderService;

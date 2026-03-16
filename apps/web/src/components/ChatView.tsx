@@ -3804,6 +3804,7 @@ export default function ChatView({ threadId }: ChatViewProps) {
           {isGitRepo && (
             <BranchToolbar
               threadId={activeThread.id}
+              activities={threadActivities}
               onEnvModeChange={onEnvModeChange}
               envLocked={envLocked}
               onComposerFocusRequest={scheduleComposerFocus}

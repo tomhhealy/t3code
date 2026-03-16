@@ -268,6 +268,35 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
         return { adapter: recovered.adapter, threadId: input.threadId, isActive: true } as const;
       });
 
+    const resolveRateLimitSession = (input: {
+      readonly threadId: ThreadId;
+      readonly operation: string;
+    }) =>
+      Effect.gen(function* () {
+        const bindingOption = yield* directory.getBinding(input.threadId);
+        const binding = Option.getOrUndefined(bindingOption);
+        if (binding) {
+          return yield* resolveRoutableSession({
+            threadId: input.threadId,
+            operation: input.operation,
+            allowRecovery: true,
+          });
+        }
+
+        for (const adapter of adapters) {
+          const sessions = yield* adapter.listSessions();
+          const session = sessions[0];
+          if (session) {
+            return { adapter, threadId: session.threadId, isActive: true } as const;
+          }
+        }
+
+        return yield* toValidationError(
+          input.operation,
+          `Cannot refresh rate limits for thread '${input.threadId}' because no active provider session is available.`,
+        );
+      });
+
     const startSession: ProviderServiceShape["startSession"] = (threadId, rawInput) =>
       Effect.gen(function* () {
         const parsed = yield* decodeInputOrValidationError({
@@ -497,10 +526,9 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
 
     const refreshRateLimits: ProviderServiceShape["refreshRateLimits"] = (threadId) =>
       Effect.gen(function* () {
-        const routed = yield* resolveRoutableSession({
+        const routed = yield* resolveRateLimitSession({
           threadId,
           operation: "ProviderService.refreshRateLimits",
-          allowRecovery: true,
         });
         const result = yield* routed.adapter.refreshRateLimits(routed.threadId);
         yield* analytics.record("provider.rate_limits.refreshed", {

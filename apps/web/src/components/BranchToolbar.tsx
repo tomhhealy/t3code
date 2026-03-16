@@ -1,4 +1,4 @@
-import type { ThreadId } from "@t3tools/contracts";
+import type { OrchestrationThreadActivity, ThreadId } from "@t3tools/contracts";
 import { FolderIcon, GitForkIcon } from "lucide-react";
 import { useCallback } from "react";
 
@@ -12,6 +12,7 @@ import {
   resolveEffectiveEnvMode,
 } from "./BranchToolbar.logic";
 import { BranchToolbarBranchSelector } from "./BranchToolbarBranchSelector";
+import { ThreadContextUsageIndicator } from "./chat/ThreadContextUsageIndicator";
 import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from "./ui/select";
 
 const envModeItems = [
@@ -21,6 +22,7 @@ const envModeItems = [
 
 interface BranchToolbarProps {
   threadId: ThreadId;
+  activities: ReadonlyArray<OrchestrationThreadActivity>;
   onEnvModeChange: (mode: EnvMode) => void;
   envLocked: boolean;
   onCheckoutPullRequestRequest?: (reference: string) => void;
@@ -29,6 +31,7 @@ interface BranchToolbarProps {
 
 export default function BranchToolbar({
   threadId,
+  activities,
   onEnvModeChange,
   envLocked,
   onCheckoutPullRequestRequest,
@@ -155,17 +158,20 @@ export default function BranchToolbar({
         </Select>
       )}
 
-      <BranchToolbarBranchSelector
-        activeProjectCwd={activeProject.cwd}
-        activeThreadBranch={activeThreadBranch}
-        activeWorktreePath={activeWorktreePath}
-        branchCwd={branchCwd}
-        effectiveEnvMode={effectiveEnvMode}
-        envLocked={envLocked}
-        onSetThreadBranch={setThreadBranch}
-        {...(onCheckoutPullRequestRequest ? { onCheckoutPullRequestRequest } : {})}
-        {...(onComposerFocusRequest ? { onComposerFocusRequest } : {})}
-      />
+      <div className="flex items-center gap-2.5">
+        <BranchToolbarBranchSelector
+          activeProjectCwd={activeProject.cwd}
+          activeThreadBranch={activeThreadBranch}
+          activeWorktreePath={activeWorktreePath}
+          branchCwd={branchCwd}
+          effectiveEnvMode={effectiveEnvMode}
+          envLocked={envLocked}
+          onSetThreadBranch={setThreadBranch}
+          {...(onCheckoutPullRequestRequest ? { onCheckoutPullRequestRequest } : {})}
+          {...(onComposerFocusRequest ? { onComposerFocusRequest } : {})}
+        />
+        <ThreadContextUsageIndicator activities={activities} />
+      </div>
     </div>
   );
 }

@@ -1,13 +1,14 @@
 import type { ThreadId } from "@t3tools/contracts";
 import type { OrchestrationThreadActivity } from "@t3tools/contracts";
 import { ChartNoAxesColumnIcon, RefreshCcwIcon } from "lucide-react";
-import { memo, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
+  getRateLimitSnapshot,
   getLatestModelUsage,
-  getLatestTokenUsage,
   getModelUsageFromRateLimits,
-  summarizeModelUsage,
+  getLatestRateLimitSnapshot,
+  summarizeRateLimitPair,
 } from "~/modelUsage";
 import { cn } from "~/lib/utils";
 import { readNativeApi } from "~/nativeApi";
@@ -49,6 +50,17 @@ function formatUsagePercent(usedPercent: number | null): string {
   return `${usedPercent.toFixed(usedPercent >= 10 ? 0 : 1)}%`;
 }
 
+function formatRefreshError(error: unknown): string {
+  if (!(error instanceof Error)) {
+    return "Failed to refresh rate limits.";
+  }
+  const firstLine = error.message.split("\n")[0]?.trim();
+  if (!firstLine) {
+    return "Failed to refresh rate limits.";
+  }
+  return firstLine.replace(/^Error:\s*/, "");
+}
+
 export const ModelUsagePopover = memo(function ModelUsagePopover({
   threadId,
   activities,
@@ -64,6 +76,7 @@ export const ModelUsagePopover = memo(function ModelUsagePopover({
   } | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshError, setRefreshError] = useState<string | null>(null);
+  const autoRefreshThreadIdRef = useRef<ThreadId | null>(null);
 
   const entries = useMemo(
     () =>
@@ -72,30 +85,44 @@ export const ModelUsagePopover = memo(function ModelUsagePopover({
         : getLatestModelUsage(activities),
     [activities, refreshState],
   );
-  const tokenUsage = getLatestTokenUsage(activities);
-  const summary = summarizeModelUsage(entries);
+  const snapshot = useMemo(
+    () =>
+      refreshState?.rateLimits
+        ? getRateLimitSnapshot(refreshState.rateLimits)
+        : getLatestRateLimitSnapshot(activities),
+    [activities, refreshState],
+  );
+  const summary = summarizeRateLimitPair(snapshot);
   const latestFetchedAt = refreshState?.fetchedAt ?? null;
   const cooldownExpiresAt = refreshState?.cooldownExpiresAt ?? null;
 
-  const tokenSummary =
-    tokenUsage?.totalTokens !== null && tokenUsage?.totalTokens !== undefined
-      ? `${Intl.NumberFormat().format(tokenUsage.totalTokens)} tok`
-      : null;
+  const refreshRateLimits = useCallback(
+    async (options?: { silent?: boolean }) => {
+      const api = readNativeApi();
+      if (!api) return;
+      setIsRefreshing(true);
+      if (!options?.silent) {
+        setRefreshError(null);
+      }
+      try {
+        const result = await api.server.refreshRateLimits({ threadId });
+        setRefreshState(result);
+      } catch (error) {
+        setRefreshError(formatRefreshError(error));
+      } finally {
+        setIsRefreshing(false);
+      }
+    },
+    [threadId],
+  );
 
-  const refreshRateLimits = async () => {
-    const api = readNativeApi();
-    if (!api) return;
-    setIsRefreshing(true);
-    setRefreshError(null);
-    try {
-      const result = await api.server.refreshRateLimits({ threadId });
-      setRefreshState(result);
-    } catch (error) {
-      setRefreshError(error instanceof Error ? error.message : "Failed to refresh rate limits.");
-    } finally {
-      setIsRefreshing(false);
+  useEffect(() => {
+    if (autoRefreshThreadIdRef.current === threadId) {
+      return;
     }
-  };
+    autoRefreshThreadIdRef.current = threadId;
+    void refreshRateLimits({ silent: true });
+  }, [refreshRateLimits, threadId]);
 
   return (
     <Popover>
@@ -103,10 +130,7 @@ export const ModelUsagePopover = memo(function ModelUsagePopover({
         render={
           <Button size="xs" variant="outline" className="shrink-0 gap-1.5">
             <ChartNoAxesColumnIcon className="size-3.5" />
-            <span>Limits</span>
-            <Badge variant="secondary" size="sm" className="font-medium">
-              {summary}
-            </Badge>
+            <span>{`Limits: ${summary}`}</span>
           </Button>
         }
       />
@@ -149,75 +173,17 @@ export const ModelUsagePopover = memo(function ModelUsagePopover({
                 {cooldownExpiresAt && (
                   <span>Next fetch {formatResetTime(cooldownExpiresAt) ?? cooldownExpiresAt}</span>
                 )}
-                {refreshError && <span className="text-destructive">{refreshError}</span>}
+                {refreshError && (
+                  <span className="max-w-full break-words text-destructive">{refreshError}</span>
+                )}
               </div>
             )}
             {entries.length === 0 ? (
-              <div className="space-y-3">
-                <div className="rounded-xl border border-dashed border-border/80 bg-muted/20 px-3 py-4">
-                  <div className="text-sm font-medium text-foreground">No limit snapshot yet</div>
-                  <div className="mt-1 text-sm text-muted-foreground">
-                    OpenAI has not returned a 5h or weekly snapshot for this thread yet.
-                  </div>
+              <div className="rounded-xl border border-dashed border-border/80 bg-muted/20 px-3 py-4">
+                <div className="text-sm font-medium text-foreground">No limit snapshot yet</div>
+                <div className="mt-1 text-sm text-muted-foreground">
+                  OpenAI has not returned a 5h or weekly account snapshot yet.
                 </div>
-                {tokenUsage && (
-                  <div className="rounded-xl border border-border/80 bg-muted/15 px-3 py-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <div className="text-sm font-medium text-foreground">
-                          Latest token usage
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          Fallback from the active session
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-sm font-semibold text-foreground">
-                          {tokenSummary ?? "Unknown"}
-                        </div>
-                        <div className="text-[11px] text-muted-foreground">
-                          {tokenUsage.modelContextWindow !== null
-                            ? `${Intl.NumberFormat().format(tokenUsage.modelContextWindow)} context`
-                            : "No context window reported"}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] text-muted-foreground">
-                      <span className="rounded-lg bg-background/70 px-2 py-1">
-                        Input{" "}
-                        <span className="font-medium text-foreground">
-                          {tokenUsage.inputTokens !== null
-                            ? Intl.NumberFormat().format(tokenUsage.inputTokens)
-                            : "n/a"}
-                        </span>
-                      </span>
-                      <span className="rounded-lg bg-background/70 px-2 py-1">
-                        Output{" "}
-                        <span className="font-medium text-foreground">
-                          {tokenUsage.outputTokens !== null
-                            ? Intl.NumberFormat().format(tokenUsage.outputTokens)
-                            : "n/a"}
-                        </span>
-                      </span>
-                      <span className="rounded-lg bg-background/70 px-2 py-1">
-                        Cached{" "}
-                        <span className="font-medium text-foreground">
-                          {tokenUsage.cachedInputTokens !== null
-                            ? Intl.NumberFormat().format(tokenUsage.cachedInputTokens)
-                            : "n/a"}
-                        </span>
-                      </span>
-                      <span className="rounded-lg bg-background/70 px-2 py-1">
-                        Reasoning{" "}
-                        <span className="font-medium text-foreground">
-                          {tokenUsage.reasoningOutputTokens !== null
-                            ? Intl.NumberFormat().format(tokenUsage.reasoningOutputTokens)
-                            : "n/a"}
-                        </span>
-                      </span>
-                    </div>
-                  </div>
-                )}
               </div>
             ) : (
               entries.map((entry) => {
