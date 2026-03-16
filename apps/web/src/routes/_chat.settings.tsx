@@ -4,7 +4,11 @@ import { useCallback, useState } from "react";
 import { EDITORS, type EditorId, type ProviderKind } from "@t3tools/contracts";
 import { RotateCcwIcon } from "lucide-react";
 import { getModelOptions, normalizeModelSlug } from "@t3tools/shared/model";
-import { MAX_CUSTOM_MODEL_LENGTH, useAppSettings } from "../appSettings";
+import {
+  MAX_CUSTOM_MODEL_LENGTH,
+  useAppSettings,
+  type DiffFileExpansionPreference,
+} from "../appSettings";
 import { resolveAndPersistPreferredEditor } from "../editorPreferences";
 import { isElectron } from "../env";
 import { useTheme } from "../hooks/useTheme";
@@ -63,6 +67,11 @@ const TIMESTAMP_FORMAT_LABELS = {
   "12-hour": "12-hour",
   "24-hour": "24-hour",
 } as const;
+
+const DIFF_FILE_EXPANSION_LABELS: Record<DiffFileExpansionPreference, string> = {
+  expanded: "Expanded",
+  collapsed: "Collapsed",
+};
 
 function getCustomModelsForProvider(
   settings: ReturnType<typeof useAppSettings>["settings"],
@@ -299,7 +308,40 @@ function SettingsRouteView() {
                   </Select>
                 </div>
 
-                {settings.timestampFormat !== defaults.timestampFormat ? (
+                <div className="flex items-center justify-between rounded-lg border border-border bg-background px-3 py-2">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Default diff file view</p>
+                    <p className="text-xs text-muted-foreground">
+                      New diff selections can open with every file expanded or collapsed.
+                    </p>
+                  </div>
+                  <Select
+                    value={settings.defaultDiffFileExpansion}
+                    onValueChange={(value) => {
+                      if (value !== "expanded" && value !== "collapsed") return;
+                      updateSettings({
+                        defaultDiffFileExpansion: value,
+                      });
+                    }}
+                  >
+                    <SelectTrigger className="w-40" aria-label="Default diff file view">
+                      <SelectValue>
+                        {DIFF_FILE_EXPANSION_LABELS[settings.defaultDiffFileExpansion]}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectPopup align="end">
+                      <SelectItem value="expanded">
+                        {DIFF_FILE_EXPANSION_LABELS.expanded}
+                      </SelectItem>
+                      <SelectItem value="collapsed">
+                        {DIFF_FILE_EXPANSION_LABELS.collapsed}
+                      </SelectItem>
+                    </SelectPopup>
+                  </Select>
+                </div>
+
+                {settings.timestampFormat !== defaults.timestampFormat ||
+                settings.defaultDiffFileExpansion !== defaults.defaultDiffFileExpansion ? (
                   <div className="flex justify-end">
                     <Button
                       size="xs"
@@ -307,6 +349,7 @@ function SettingsRouteView() {
                       onClick={() =>
                         updateSettings({
                           timestampFormat: defaults.timestampFormat,
+                          defaultDiffFileExpansion: defaults.defaultDiffFileExpansion,
                         })
                       }
                     >

@@ -3,8 +3,16 @@ import { FileDiff, type FileDiffMetadata, Virtualizer } from "@pierre/diffs/reac
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { ThreadId, type TurnId } from "@t3tools/contracts";
-import { ChevronLeftIcon, ChevronRightIcon, Columns2Icon, Rows3Icon } from "lucide-react";
 import {
+  ChevronDownIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  Columns2Icon,
+  ExternalLinkIcon,
+  Rows3Icon,
+} from "lucide-react";
+import {
+  type MouseEvent as ReactMouseEvent,
   type WheelEvent as ReactWheelEvent,
   useCallback,
   useEffect,
@@ -12,28 +20,34 @@ import {
   useRef,
   useState,
 } from "react";
-import { openInPreferredEditor } from "../editorPreferences";
-import { gitBranchesQueryOptions } from "~/lib/gitReactQuery";
-import { checkpointDiffQueryOptions } from "~/lib/providerReactQuery";
-import { cn } from "~/lib/utils";
-import { readNativeApi } from "../nativeApi";
-import { resolvePathLinkTarget } from "../terminal-links";
-import { parseDiffRouteSearch, stripDiffSearchParams } from "../diffRouteSearch";
-import { useTheme } from "../hooks/useTheme";
-import { buildPatchCacheKey } from "../lib/diffRendering";
-import { resolveDiffThemeName } from "../lib/diffRendering";
-import { useTurnDiffSummaries } from "../hooks/useTurnDiffSummaries";
-import { useStore } from "../store";
 import { useAppSettings } from "../appSettings";
+import { parseDiffRouteSearch, stripDiffSearchParams } from "../diffRouteSearch";
+import { openInPreferredEditor } from "../editorPreferences";
+import { useTheme } from "../hooks/useTheme";
+import { buildPatchCacheKey, resolveDiffThemeName } from "../lib/diffRendering";
+import {
+  areAllFilesExpanded,
+  buildInitialExpandedFileState,
+  readFileDiffStat,
+} from "../lib/diffPanelState";
+import { gitBranchesQueryOptions } from "../lib/gitReactQuery";
+import { checkpointDiffQueryOptions } from "../lib/providerReactQuery";
+import { resolvePathLinkTarget } from "../terminal-links";
 import { formatShortTimestamp } from "../timestampFormat";
+import { useTurnDiffSummaries } from "../hooks/useTurnDiffSummaries";
+import { readNativeApi } from "../nativeApi";
+import { useStore } from "../store";
+import { cn } from "../lib/utils";
 import { DiffPanelLoadingState, DiffPanelShell, type DiffPanelMode } from "./DiffPanelShell";
-import { ToggleGroup, Toggle } from "./ui/toggle-group";
+import { VscodeEntryIcon } from "./chat/VscodeEntryIcon";
+import { DiffStatLabel } from "./chat/DiffStatLabel";
+import { Button } from "./ui/button";
+import { Toggle, ToggleGroup } from "./ui/toggle-group";
 
 type DiffRenderMode = "stacked" | "split";
 type DiffThemeType = "light" | "dark";
 
 const DIFF_PANEL_UNSAFE_CSS = `
-[data-diffs-header],
 [data-diff],
 [data-file],
 [data-error-wrapper],
@@ -72,27 +86,8 @@ const DIFF_PANEL_UNSAFE_CSS = `
   color: var(--foreground) !important;
 }
 
-[data-diffs-header] {
-  position: sticky !important;
-  top: 0;
-  z-index: 4;
-  background-color: color-mix(in srgb, var(--card) 94%, var(--foreground)) !important;
-  border-bottom: 1px solid var(--border) !important;
-}
-
-[data-title] {
-  cursor: pointer;
-  transition:
-    color 120ms ease,
-    text-decoration-color 120ms ease;
-  text-decoration: underline;
-  text-decoration-color: transparent;
-  text-underline-offset: 2px;
-}
-
-[data-title]:hover {
-  color: color-mix(in srgb, var(--foreground) 84%, var(--primary)) !important;
-  text-decoration-color: currentColor;
+.diff-render-file-body [data-diffs-header] {
+  display: none !important;
 }
 `;
 
@@ -106,6 +101,14 @@ type RenderablePatch =
       text: string;
       reason: string;
     };
+
+interface RenderableFileEntry {
+  fileDiff: FileDiffMetadata;
+  filePath: string;
+  fileKey: string;
+  additions: number | null;
+  deletions: number | null;
+}
 
 function getRenderablePatch(
   patch: string | undefined,
@@ -155,6 +158,101 @@ interface DiffPanelProps {
   mode?: DiffPanelMode;
 }
 
+interface DiffPanelFileSectionProps {
+  additions: number | null;
+  deletions: number | null;
+  diffRenderMode: DiffRenderMode;
+  fileDiff: FileDiffMetadata;
+  filePath: string;
+  isExpanded: boolean;
+  onOpenFile: (filePath: string) => void;
+  onToggleExpanded: () => void;
+  resolvedTheme: "light" | "dark";
+}
+
+function DiffPanelFileSection({
+  additions,
+  deletions,
+  diffRenderMode,
+  fileDiff,
+  filePath,
+  isExpanded,
+  onOpenFile,
+  onToggleExpanded,
+  resolvedTheme,
+}: DiffPanelFileSectionProps) {
+  const hasStats = additions !== null && deletions !== null;
+
+  const onOpenButtonClick = useCallback(
+    (event: ReactMouseEvent<HTMLButtonElement>) => {
+      event.stopPropagation();
+      onOpenFile(filePath);
+    },
+    [filePath, onOpenFile],
+  );
+
+  return (
+    <div
+      data-diff-file-path={filePath}
+      className="diff-render-file mb-2 rounded-md first:mt-2 last:mb-0"
+    >
+      <div className="overflow-hidden rounded-md border border-border/70 bg-card/75">
+        <div className="flex items-center gap-2 border-b border-border/70 bg-card/90 px-2 py-1.5">
+          <button
+            type="button"
+            className="flex min-w-0 flex-1 items-center gap-2 text-left"
+            onClick={onToggleExpanded}
+            aria-expanded={isExpanded}
+            aria-label={`${isExpanded ? "Collapse" : "Expand"} ${filePath}`}
+          >
+            <ChevronDownIcon
+              className={cn(
+                "size-3.5 shrink-0 text-muted-foreground/70 transition-transform",
+                !isExpanded && "-rotate-90",
+              )}
+            />
+            <VscodeEntryIcon
+              pathValue={filePath}
+              kind="file"
+              theme={resolvedTheme}
+              className="size-3.5 shrink-0 text-muted-foreground/75"
+            />
+            <span className="truncate font-mono text-[11px] text-foreground/90">{filePath}</span>
+          </button>
+          {hasStats ? (
+            <span className="shrink-0 font-mono text-[10px] tabular-nums">
+              <DiffStatLabel additions={additions} deletions={deletions} />
+            </span>
+          ) : null}
+          <Button
+            size="icon-xs"
+            variant="ghost"
+            aria-label={`Open ${filePath} in editor`}
+            title="Open in editor"
+            onClick={onOpenButtonClick}
+          >
+            <ExternalLinkIcon className="size-3.5" />
+          </Button>
+        </div>
+        {isExpanded ? (
+          <div className="diff-render-file-body">
+            <FileDiff
+              fileDiff={fileDiff}
+              options={{
+                diffStyle: diffRenderMode === "split" ? "split" : "unified",
+                lineDiffType: "none",
+                theme: resolveDiffThemeName(resolvedTheme),
+                themeType: resolvedTheme as DiffThemeType,
+                unsafeCSS: DIFF_PANEL_UNSAFE_CSS,
+              }}
+            />
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 export { DiffWorkerPoolProvider } from "./DiffWorkerPoolProvider";
 
 export default function DiffPanel({ mode = "inline" }: DiffPanelProps) {
@@ -166,6 +264,7 @@ export default function DiffPanel({ mode = "inline" }: DiffPanelProps) {
   const turnStripRef = useRef<HTMLDivElement>(null);
   const [canScrollTurnStripLeft, setCanScrollTurnStripLeft] = useState(false);
   const [canScrollTurnStripRight, setCanScrollTurnStripRight] = useState(false);
+  const [expandedFileKeys, setExpandedFileKeys] = useState<Record<string, boolean>>({});
   const routeThreadId = useParams({
     strict: false,
     select: (params) => (params.threadId ? ThreadId.makeUnsafe(params.threadId) : null),
@@ -281,17 +380,52 @@ export default function DiffPanel({ mode = "inline" }: DiffPanelProps) {
     () => getRenderablePatch(selectedPatch, `diff-panel:${resolvedTheme}`),
     [resolvedTheme, selectedPatch],
   );
-  const renderableFiles = useMemo(() => {
+  const renderableFiles = useMemo<RenderableFileEntry[]>(() => {
     if (!renderablePatch || renderablePatch.kind !== "files") {
       return [];
     }
-    return renderablePatch.files.toSorted((left, right) =>
-      resolveFileDiffPath(left).localeCompare(resolveFileDiffPath(right), undefined, {
-        numeric: true,
-        sensitivity: "base",
-      }),
-    );
+    return renderablePatch.files
+      .toSorted((left, right) =>
+        resolveFileDiffPath(left).localeCompare(resolveFileDiffPath(right), undefined, {
+          numeric: true,
+          sensitivity: "base",
+        }),
+      )
+      .map((fileDiff) => {
+        const { additions, deletions } = readFileDiffStat(fileDiff);
+        return {
+          fileDiff,
+          fileKey: buildFileDiffRenderKey(fileDiff),
+          filePath: resolveFileDiffPath(fileDiff),
+          additions,
+          deletions,
+        };
+      });
   }, [renderablePatch]);
+  const renderableFileKeys = useMemo(
+    () => renderableFiles.map((fileEntry) => fileEntry.fileKey),
+    [renderableFiles],
+  );
+  const allFilesExpanded = useMemo(
+    () => areAllFilesExpanded(expandedFileKeys, renderableFileKeys),
+    [expandedFileKeys, renderableFileKeys],
+  );
+  const fileExpansionResetKey = useMemo(
+    () =>
+      [
+        selectedTurn?.turnId ?? "all",
+        selectedPatch ?? "",
+        renderableFileKeys.join("\u0000"),
+        settings.defaultDiffFileExpansion,
+      ].join("\u0001"),
+    [renderableFileKeys, selectedPatch, selectedTurn?.turnId, settings.defaultDiffFileExpansion],
+  );
+
+  useEffect(() => {
+    setExpandedFileKeys(
+      buildInitialExpandedFileState(renderableFileKeys, settings.defaultDiffFileExpansion),
+    );
+  }, [fileExpansionResetKey, renderableFileKeys, settings.defaultDiffFileExpansion]);
 
   useEffect(() => {
     if (!selectedFilePath || !patchViewportRef.current) {
@@ -315,6 +449,22 @@ export default function DiffPanel({ mode = "inline" }: DiffPanelProps) {
       );
     },
     [activeCwd, settings.defaultOpenDestination],
+  );
+
+  const toggleFileExpanded = useCallback((fileKey: string) => {
+    setExpandedFileKeys((current) => ({
+      ...current,
+      [fileKey]: !(current[fileKey] ?? false),
+    }));
+  }, []);
+
+  const setAllFilesExpanded = useCallback(
+    (expanded: boolean) => {
+      setExpandedFileKeys(
+        buildInitialExpandedFileState(renderableFileKeys, expanded ? "expanded" : "collapsed"),
+      );
+    },
+    [renderableFileKeys],
   );
 
   const selectTurn = (turnId: TurnId) => {
@@ -492,25 +642,35 @@ export default function DiffPanel({ mode = "inline" }: DiffPanelProps) {
           ))}
         </div>
       </div>
-      <ToggleGroup
-        className="shrink-0 [-webkit-app-region:no-drag]"
-        variant="outline"
-        size="xs"
-        value={[diffRenderMode]}
-        onValueChange={(value) => {
-          const next = value[0];
-          if (next === "stacked" || next === "split") {
-            setDiffRenderMode(next);
-          }
-        }}
-      >
-        <Toggle aria-label="Stacked diff view" value="stacked">
-          <Rows3Icon className="size-3" />
-        </Toggle>
-        <Toggle aria-label="Split diff view" value="split">
-          <Columns2Icon className="size-3" />
-        </Toggle>
-      </ToggleGroup>
+      <div className="flex shrink-0 items-center gap-2 [-webkit-app-region:no-drag]">
+        {renderableFiles.length > 0 ? (
+          <Button
+            size="xs"
+            variant="outline"
+            onClick={() => setAllFilesExpanded(!allFilesExpanded)}
+          >
+            {allFilesExpanded ? "Collapse all" : "Expand all"}
+          </Button>
+        ) : null}
+        <ToggleGroup
+          variant="outline"
+          size="xs"
+          value={[diffRenderMode]}
+          onValueChange={(value) => {
+            const next = value[0];
+            if (next === "stacked" || next === "split") {
+              setDiffRenderMode(next);
+            }
+          }}
+        >
+          <Toggle aria-label="Stacked diff view" value="stacked">
+            <Rows3Icon className="size-3" />
+          </Toggle>
+          <Toggle aria-label="Split diff view" value="split">
+            <Columns2Icon className="size-3" />
+          </Toggle>
+        </ToggleGroup>
+      </div>
     </>
   );
 
@@ -529,82 +689,64 @@ export default function DiffPanel({ mode = "inline" }: DiffPanelProps) {
           No completed turns yet.
         </div>
       ) : (
-        <>
-          <div
-            ref={patchViewportRef}
-            className="diff-panel-viewport min-h-0 min-w-0 flex-1 overflow-hidden"
-          >
-            {checkpointDiffError && !renderablePatch && (
-              <div className="px-3">
-                <p className="mb-2 text-[11px] text-red-500/80">{checkpointDiffError}</p>
-              </div>
-            )}
-            {!renderablePatch ? (
-              isLoadingCheckpointDiff ? (
-                <DiffPanelLoadingState label="Loading checkpoint diff..." />
-              ) : (
-                <div className="flex h-full items-center justify-center px-3 py-2 text-xs text-muted-foreground/70">
-                  <p>
-                    {hasNoNetChanges
-                      ? "No net changes in this selection."
-                      : "No patch available for this selection."}
-                  </p>
-                </div>
-              )
-            ) : renderablePatch.kind === "files" ? (
-              <Virtualizer
-                className="diff-render-surface h-full min-h-0 overflow-auto px-2 pb-2"
-                config={{
-                  overscrollSize: 600,
-                  intersectionObserverMargin: 1200,
-                }}
-              >
-                {renderableFiles.map((fileDiff) => {
-                  const filePath = resolveFileDiffPath(fileDiff);
-                  const fileKey = buildFileDiffRenderKey(fileDiff);
-                  const themedFileKey = `${fileKey}:${resolvedTheme}`;
-                  return (
-                    <div
-                      key={themedFileKey}
-                      data-diff-file-path={filePath}
-                      className="diff-render-file mb-2 rounded-md first:mt-2 last:mb-0"
-                      onClickCapture={(event) => {
-                        const nativeEvent = event.nativeEvent as MouseEvent;
-                        const composedPath = nativeEvent.composedPath?.() ?? [];
-                        const clickedHeader = composedPath.some((node) => {
-                          if (!(node instanceof Element)) return false;
-                          return node.hasAttribute("data-title");
-                        });
-                        if (!clickedHeader) return;
-                        openDiffFileInEditor(filePath);
-                      }}
-                    >
-                      <FileDiff
-                        fileDiff={fileDiff}
-                        options={{
-                          diffStyle: diffRenderMode === "split" ? "split" : "unified",
-                          lineDiffType: "none",
-                          theme: resolveDiffThemeName(resolvedTheme),
-                          themeType: resolvedTheme as DiffThemeType,
-                          unsafeCSS: DIFF_PANEL_UNSAFE_CSS,
-                        }}
-                      />
-                    </div>
-                  );
-                })}
-              </Virtualizer>
+        <div
+          ref={patchViewportRef}
+          className="diff-panel-viewport min-h-0 min-w-0 flex-1 overflow-hidden"
+        >
+          {checkpointDiffError && !renderablePatch && (
+            <div className="px-3">
+              <p className="mb-2 text-[11px] text-red-500/80">{checkpointDiffError}</p>
+            </div>
+          )}
+          {!renderablePatch ? (
+            isLoadingCheckpointDiff ? (
+              <DiffPanelLoadingState label="Loading checkpoint diff..." />
             ) : (
-              <div className="h-full overflow-auto p-2">
-                <div className="space-y-2">
-                  <p className="text-[11px] text-muted-foreground/75">{renderablePatch.reason}</p>
-                  <pre className="max-h-[72vh] overflow-auto rounded-md border border-border/70 bg-background/70 p-3 font-mono text-[11px] leading-relaxed text-muted-foreground/90">
-                    {renderablePatch.text}
-                  </pre>
-                </div>
+              <div className="flex h-full items-center justify-center px-3 py-2 text-xs text-muted-foreground/70">
+                <p>
+                  {hasNoNetChanges
+                    ? "No net changes in this selection."
+                    : "No patch available for this selection."}
+                </p>
               </div>
-            )}
-          </div>
-        </>
+            )
+          ) : renderablePatch.kind === "files" ? (
+            <Virtualizer
+              className="diff-render-surface h-full min-h-0 overflow-auto px-2 pb-2"
+              config={{
+                overscrollSize: 600,
+                intersectionObserverMargin: 1200,
+              }}
+            >
+              {renderableFiles.map((fileEntry) => {
+                const themedFileKey = `${fileEntry.fileKey}:${resolvedTheme}`;
+                return (
+                  <DiffPanelFileSection
+                    key={themedFileKey}
+                    additions={fileEntry.additions}
+                    deletions={fileEntry.deletions}
+                    diffRenderMode={diffRenderMode}
+                    fileDiff={fileEntry.fileDiff}
+                    filePath={fileEntry.filePath}
+                    isExpanded={expandedFileKeys[fileEntry.fileKey] !== false}
+                    onOpenFile={openDiffFileInEditor}
+                    onToggleExpanded={() => toggleFileExpanded(fileEntry.fileKey)}
+                    resolvedTheme={resolvedTheme}
+                  />
+                );
+              })}
+            </Virtualizer>
+          ) : (
+            <div className="h-full overflow-auto p-2">
+              <div className="space-y-2">
+                <p className="text-[11px] text-muted-foreground/75">{renderablePatch.reason}</p>
+                <pre className="max-h-[72vh] overflow-auto rounded-md border border-border/70 bg-background/70 p-3 font-mono text-[11px] leading-relaxed text-muted-foreground/90">
+                  {renderablePatch.text}
+                </pre>
+              </div>
+            </div>
+          )}
+        </div>
       )}
     </DiffPanelShell>
   );
