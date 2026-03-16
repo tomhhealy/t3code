@@ -129,12 +129,20 @@ export const ProjectScript = Schema.Struct({
 });
 export type ProjectScript = typeof ProjectScript.Type;
 
+export const ProjectGitNamingSettings = Schema.Struct({
+  worktreeBranchPrefix: Schema.NullOr(TrimmedNonEmptyString),
+  featureBranchPrefix: Schema.NullOr(TrimmedNonEmptyString),
+  worktreeRootName: Schema.NullOr(TrimmedNonEmptyString),
+});
+export type ProjectGitNamingSettings = typeof ProjectGitNamingSettings.Type;
+
 export const OrchestrationProject = Schema.Struct({
   id: ProjectId,
   title: TrimmedNonEmptyString,
   workspaceRoot: TrimmedNonEmptyString,
   defaultModel: Schema.NullOr(TrimmedNonEmptyString),
   scripts: Schema.Array(ProjectScript),
+  gitNaming: ProjectGitNamingSettings,
   createdAt: IsoDateTime,
   updatedAt: IsoDateTime,
   deletedAt: Schema.NullOr(IsoDateTime),
@@ -299,6 +307,7 @@ const ProjectMetaUpdateCommand = Schema.Struct({
   workspaceRoot: Schema.optional(TrimmedNonEmptyString),
   defaultModel: Schema.optional(TrimmedNonEmptyString),
   scripts: Schema.optional(Schema.Array(ProjectScript)),
+  gitNaming: Schema.optional(ProjectGitNamingSettings),
 });
 
 const ProjectDeleteCommand = Schema.Struct({
@@ -591,6 +600,7 @@ export const ProjectCreatedPayload = Schema.Struct({
   workspaceRoot: TrimmedNonEmptyString,
   defaultModel: Schema.NullOr(TrimmedNonEmptyString),
   scripts: Schema.Array(ProjectScript),
+  gitNaming: ProjectGitNamingSettings,
   createdAt: IsoDateTime,
   updatedAt: IsoDateTime,
 });
@@ -601,6 +611,7 @@ export const ProjectMetaUpdatedPayload = Schema.Struct({
   workspaceRoot: Schema.optional(TrimmedNonEmptyString),
   defaultModel: Schema.optional(Schema.NullOr(TrimmedNonEmptyString)),
   scripts: Schema.optional(Schema.Array(ProjectScript)),
+  gitNaming: Schema.optional(ProjectGitNamingSettings),
   updatedAt: IsoDateTime,
 });
 

@@ -15,6 +15,11 @@ import { createEmptyReadModel, projectEvent } from "./projector.ts";
 const asEventId = (value: string): EventId => EventId.makeUnsafe(value);
 const asProjectId = (value: string): ProjectId => ProjectId.makeUnsafe(value);
 const asMessageId = (value: string): MessageId => MessageId.makeUnsafe(value);
+const EMPTY_PROJECT_GIT_NAMING = {
+  worktreeBranchPrefix: null,
+  featureBranchPrefix: null,
+  worktreeRootName: null,
+} as const;
 
 describe("decider project scripts", () => {
   it("emits empty scripts on project.create", async () => {
@@ -61,6 +66,7 @@ describe("decider project scripts", () => {
           workspaceRoot: "/tmp/scripts",
           defaultModel: null,
           scripts: [],
+          gitNaming: { ...EMPTY_PROJECT_GIT_NAMING },
           createdAt: now,
           updatedAt: now,
         },
@@ -115,6 +121,7 @@ describe("decider project scripts", () => {
           workspaceRoot: "/tmp/project",
           defaultModel: null,
           scripts: [],
+          gitNaming: { ...EMPTY_PROJECT_GIT_NAMING },
           createdAt: now,
           updatedAt: now,
         },
@@ -222,6 +229,7 @@ describe("decider project scripts", () => {
           workspaceRoot: "/tmp/project",
           defaultModel: null,
           scripts: [],
+          gitNaming: { ...EMPTY_PROJECT_GIT_NAMING },
           createdAt: now,
           updatedAt: now,
         },
@@ -301,6 +309,7 @@ describe("decider project scripts", () => {
           workspaceRoot: "/tmp/project",
           defaultModel: null,
           scripts: [],
+          gitNaming: { ...EMPTY_PROJECT_GIT_NAMING },
           createdAt: now,
           updatedAt: now,
         },

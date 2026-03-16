@@ -956,6 +956,7 @@ export const makeGitManager = Effect.gen(function* () {
         cwd: input.cwd,
         branch: localPullRequestBranch,
         path: null,
+        worktreeRootName: input.worktreeRootName,
       });
       yield* ensureExistingWorktreeUpstream(worktree.worktree.path);
 
@@ -970,6 +971,7 @@ export const makeGitManager = Effect.gen(function* () {
   const runFeatureBranchStep = (
     cwd: string,
     branch: string | null,
+    featureBranchPrefix?: string,
     commitMessage?: string,
     filePaths?: readonly string[],
   ) =>
@@ -988,9 +990,14 @@ export const makeGitManager = Effect.gen(function* () {
         );
       }
 
-      const preferredBranch = suggestion.branch ?? sanitizeFeatureBranchName(suggestion.subject);
+      const preferredBranch =
+        suggestion.branch ?? sanitizeFeatureBranchName(suggestion.subject, featureBranchPrefix);
       const existingBranchNames = yield* gitCore.listLocalBranchNames(cwd);
-      const resolvedBranch = resolveAutoFeatureBranchName(existingBranchNames, preferredBranch);
+      const resolvedBranch = resolveAutoFeatureBranchName(
+        existingBranchNames,
+        preferredBranch,
+        featureBranchPrefix,
+      );
 
       yield* gitCore.createBranch({ cwd, branch: resolvedBranch });
       yield* Effect.scoped(gitCore.checkoutBranch({ cwd, branch: resolvedBranch }));
@@ -1026,6 +1033,7 @@ export const makeGitManager = Effect.gen(function* () {
         const result = yield* runFeatureBranchStep(
           input.cwd,
           initialStatus.branch,
+          input.featureBranchPrefix,
           input.commitMessage,
           input.filePaths,
         );

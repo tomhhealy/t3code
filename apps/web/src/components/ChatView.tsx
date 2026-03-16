@@ -118,7 +118,11 @@ import {
 import { SidebarTrigger } from "./ui/sidebar";
 import { newCommandId, newMessageId, newThreadId } from "~/lib/utils";
 import { readNativeApi } from "~/nativeApi";
-import { resolveAppModelSelection, useAppSettings } from "../appSettings";
+import {
+  resolveAppModelSelection,
+  resolveEffectiveGitNamingSettings,
+  useAppSettings,
+} from "../appSettings";
 import { isTerminalFocused } from "../lib/terminalFocus";
 import {
   type ComposerImageAttachment,
@@ -385,6 +389,14 @@ export default function ChatView({ threadId }: ChatViewProps) {
   const activeLatestTurn = activeThread?.latestTurn ?? null;
   const latestTurnSettled = isLatestTurnSettled(activeLatestTurn, activeThread?.session ?? null);
   const activeProject = projects.find((p) => p.id === activeThread?.projectId);
+  const effectiveGitNaming = useMemo(
+    () =>
+      resolveEffectiveGitNamingSettings({
+        globalSettings: settings,
+        projectGitNaming: activeProject?.gitNaming ?? null,
+      }),
+    [activeProject?.gitNaming, settings],
+  );
 
   const openPullRequestDialog = useCallback(
     (reference?: string) => {
@@ -1285,6 +1297,40 @@ export default function ChatView({ threadId }: ChatViewProps) {
       }
     },
     [queryClient],
+  );
+  const persistProjectGitNaming = useCallback(
+    async (input: {
+      projectId: ProjectId;
+      gitNaming: {
+        worktreeBranchPrefix: string | null;
+        featureBranchPrefix: string | null;
+        worktreeRootName: string | null;
+      };
+    }) => {
+      const api = readNativeApi();
+      if (!api) return;
+      await api.orchestration.dispatchCommand({
+        type: "project.meta.update",
+        commandId: newCommandId(),
+        projectId: input.projectId,
+        gitNaming: input.gitNaming,
+      });
+    },
+    [],
+  );
+  const updateProjectGitNaming = useCallback(
+    async (gitNaming: {
+      worktreeBranchPrefix: string | null;
+      featureBranchPrefix: string | null;
+      worktreeRootName: string | null;
+    }) => {
+      if (!activeProject) return;
+      await persistProjectGitNaming({
+        projectId: activeProject.id,
+        gitNaming,
+      });
+    },
+    [activeProject, persistProjectGitNaming],
   );
   const saveProjectScript = useCallback(
     async (input: NewProjectScriptInput) => {
@@ -2306,11 +2352,12 @@ export default function ChatView({ threadId }: ChatViewProps) {
       // On first message: lock in branch + create worktree if needed.
       if (baseBranchForWorktree) {
         beginSendPhase("preparing-worktree");
-        const newBranch = buildTemporaryWorktreeBranchName();
+        const newBranch = buildTemporaryWorktreeBranchName(effectiveGitNaming.worktreeBranchPrefix);
         const result = await createWorktreeMutation.mutateAsync({
           cwd: activeProject.cwd,
           branch: baseBranchForWorktree,
           newBranch,
+          worktreeRootName: effectiveGitNaming.worktreeRootName,
         });
         nextThreadBranch = result.worktree.branch;
         nextThreadWorktreePath = result.worktree.path;
@@ -3234,6 +3281,8 @@ export default function ChatView({ threadId }: ChatViewProps) {
           isGitRepo={isGitRepo}
           openInCwd={activeThread.worktreePath ?? activeProject?.cwd ?? null}
           activeProjectScripts={activeProject?.scripts}
+          activeProjectGitNaming={activeProject?.gitNaming}
+          effectiveGitNaming={effectiveGitNaming}
           preferredScriptId={
             activeProject ? (lastInvokedScriptByProjectId[activeProject.id] ?? null) : null
           }
@@ -3248,6 +3297,7 @@ export default function ChatView({ threadId }: ChatViewProps) {
           onAddProjectScript={saveProjectScript}
           onUpdateProjectScript={updateProjectScript}
           onDeleteProjectScript={deleteProjectScript}
+          onUpdateProjectGitNaming={updateProjectGitNaming}
           onToggleDiff={onToggleDiff}
         />
       </header>
@@ -3818,6 +3868,7 @@ export default function ChatView({ threadId }: ChatViewProps) {
               key={pullRequestDialogState.key}
               open
               cwd={activeProject?.cwd ?? null}
+              worktreeRootName={effectiveGitNaming.worktreeRootName}
               initialReference={pullRequestDialogState.initialReference}
               onOpenChange={(open) => {
                 if (!open) {

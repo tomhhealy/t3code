@@ -10,6 +10,12 @@ import { describe, expect, it } from "vitest";
 import { markThreadUnread, reorderProjects, syncServerReadModel, type AppState } from "./store";
 import { DEFAULT_INTERACTION_MODE, DEFAULT_RUNTIME_MODE, type Thread } from "./types";
 
+const EMPTY_PROJECT_GIT_NAMING = {
+  worktreeBranchPrefix: null,
+  featureBranchPrefix: null,
+  worktreeRootName: null,
+} as const;
+
 function makeThread(overrides: Partial<Thread> = {}): Thread {
   return {
     id: ThreadId.makeUnsafe("thread-1"),
@@ -43,6 +49,7 @@ function makeState(thread: Thread): AppState {
         model: "gpt-5-codex",
         expanded: true,
         scripts: [],
+        gitNaming: { ...EMPTY_PROJECT_GIT_NAMING },
       },
     ],
     threads: [thread],
@@ -87,6 +94,7 @@ function makeReadModel(thread: OrchestrationReadModel["threads"][number]): Orche
         updatedAt: "2026-02-27T00:00:00.000Z",
         deletedAt: null,
         scripts: [],
+        gitNaming: { ...EMPTY_PROJECT_GIT_NAMING },
       },
     ],
     threads: [thread],
@@ -105,6 +113,7 @@ function makeReadModelProject(
     updatedAt: "2026-02-27T00:00:00.000Z",
     deletedAt: null,
     scripts: [],
+    gitNaming: { ...EMPTY_PROJECT_GIT_NAMING },
     ...overrides,
   };
 }
@@ -162,6 +171,7 @@ describe("store pure functions", () => {
           model: DEFAULT_MODEL_BY_PROVIDER.codex,
           expanded: true,
           scripts: [],
+          gitNaming: { ...EMPTY_PROJECT_GIT_NAMING },
         },
         {
           id: project2,
@@ -170,6 +180,7 @@ describe("store pure functions", () => {
           model: DEFAULT_MODEL_BY_PROVIDER.codex,
           expanded: true,
           scripts: [],
+          gitNaming: { ...EMPTY_PROJECT_GIT_NAMING },
         },
         {
           id: project3,
@@ -178,6 +189,7 @@ describe("store pure functions", () => {
           model: DEFAULT_MODEL_BY_PROVIDER.codex,
           expanded: true,
           scripts: [],
+          gitNaming: { ...EMPTY_PROJECT_GIT_NAMING },
         },
       ],
       threads: [],
@@ -217,6 +229,7 @@ describe("store read model sync", () => {
           model: DEFAULT_MODEL_BY_PROVIDER.codex,
           expanded: true,
           scripts: [],
+          gitNaming: { ...EMPTY_PROJECT_GIT_NAMING },
         },
         {
           id: project1,
@@ -225,6 +238,7 @@ describe("store read model sync", () => {
           model: DEFAULT_MODEL_BY_PROVIDER.codex,
           expanded: true,
           scripts: [],
+          gitNaming: { ...EMPTY_PROJECT_GIT_NAMING },
         },
       ],
       threads: [],

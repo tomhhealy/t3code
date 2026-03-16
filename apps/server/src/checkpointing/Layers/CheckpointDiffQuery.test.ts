@@ -15,6 +15,12 @@ import { CheckpointDiffQueryLive } from "./CheckpointDiffQuery.ts";
 import { CheckpointStore, type CheckpointStoreShape } from "../Services/CheckpointStore.ts";
 import { CheckpointDiffQuery } from "../Services/CheckpointDiffQuery.ts";
 
+const EMPTY_PROJECT_GIT_NAMING = {
+  worktreeBranchPrefix: null,
+  featureBranchPrefix: null,
+  worktreeRootName: null,
+} as const;
+
 function makeSnapshot(input: {
   readonly projectId: ProjectId;
   readonly threadId: ThreadId;
@@ -33,6 +39,7 @@ function makeSnapshot(input: {
         workspaceRoot: input.workspaceRoot,
         defaultModel: null,
         scripts: [],
+        gitNaming: { ...EMPTY_PROJECT_GIT_NAMING },
         createdAt: "2026-01-01T00:00:00.000Z",
         updatedAt: "2026-01-01T00:00:00.000Z",
         deletedAt: null,

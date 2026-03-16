@@ -49,6 +49,7 @@ import { readNativeApi } from "~/nativeApi";
 interface GitActionsControlProps {
   gitCwd: string | null;
   activeThreadId: ThreadId | null;
+  featureBranchPrefix: string;
 }
 
 interface PendingDefaultBranchAction {
@@ -154,7 +155,11 @@ function GitQuickActionIcon({ quickAction }: { quickAction: GitQuickAction }) {
   return <InfoIcon className={iconClassName} />;
 }
 
-export default function GitActionsControl({ gitCwd, activeThreadId }: GitActionsControlProps) {
+export default function GitActionsControl({
+  gitCwd,
+  activeThreadId,
+  featureBranchPrefix,
+}: GitActionsControlProps) {
   const { settings } = useAppSettings();
   const threadToastData = useMemo(
     () => (activeThreadId ? { threadId: activeThreadId } : undefined),
@@ -352,6 +357,7 @@ export default function GitActionsControl({ gitCwd, activeThreadId }: GitActions
         action,
         ...(commitMessage ? { commitMessage } : {}),
         ...(featureBranch ? { featureBranch } : {}),
+        ...(featureBranch ? { featureBranchPrefix } : {}),
         ...(filePaths ? { filePaths } : {}),
       });
 
@@ -444,6 +450,7 @@ export default function GitActionsControl({ gitCwd, activeThreadId }: GitActions
     },
 
     [
+      featureBranchPrefix,
       isDefaultBranch,
       runImmediateGitActionMutation,
       setPendingDefaultBranchAction,

@@ -1,3 +1,7 @@
+export const DEFAULT_WORKTREE_BRANCH_PREFIX = "t3code";
+export const DEFAULT_FEATURE_BRANCH_PREFIX = "feature";
+export const DEFAULT_WORKTREE_ROOT_NAME = "worktrees";
+
 /**
  * Sanitize an arbitrary string into a valid, lowercase git branch fragment.
  * Strips quotes, collapses separators, limits to 64 chars.
@@ -20,31 +24,47 @@ export function sanitizeBranchFragment(raw: string): string {
   return branchFragment.length > 0 ? branchFragment : "update";
 }
 
-/**
- * Sanitize a string into a `feature/…` branch name.
- * Preserves an existing `feature/` prefix or slash-separated namespace.
- */
-export function sanitizeFeatureBranchName(raw: string): string {
-  const sanitized = sanitizeBranchFragment(raw);
-  if (sanitized.includes("/")) {
-    return sanitized.startsWith("feature/") ? sanitized : `feature/${sanitized}`;
-  }
-  return `feature/${sanitized}`;
+export function normalizeGitNamingSegment(
+  raw: string | null | undefined,
+  fallback: string,
+): string {
+  const normalized = sanitizeBranchFragment(raw ?? "").replace(/\//g, "-");
+  return normalized.length > 0 ? normalized : fallback;
 }
 
-const AUTO_FEATURE_BRANCH_FALLBACK = "feature/update";
+/**
+ * Sanitize a string into a `${prefix}/…` branch name.
+ * Preserves an existing `${prefix}/` prefix or slash-separated namespace.
+ */
+export function sanitizeFeatureBranchName(
+  raw: string,
+  prefix = DEFAULT_FEATURE_BRANCH_PREFIX,
+): string {
+  const sanitized = sanitizeBranchFragment(raw);
+  const normalizedPrefix = normalizeGitNamingSegment(prefix, DEFAULT_FEATURE_BRANCH_PREFIX);
+  if (sanitized.includes("/")) {
+    return sanitized.startsWith(`${normalizedPrefix}/`)
+      ? sanitized
+      : `${normalizedPrefix}/${sanitized}`;
+  }
+  return `${normalizedPrefix}/${sanitized}`;
+}
 
 /**
- * Resolve a unique `feature/…` branch name that doesn't collide with
+ * Resolve a unique `${prefix}/…` branch name that doesn't collide with
  * any existing branch. Appends a numeric suffix when needed.
  */
 export function resolveAutoFeatureBranchName(
   existingBranchNames: readonly string[],
   preferredBranch?: string,
+  prefix = DEFAULT_FEATURE_BRANCH_PREFIX,
 ): string {
   const preferred = preferredBranch?.trim();
+  const normalizedPrefix = normalizeGitNamingSegment(prefix, DEFAULT_FEATURE_BRANCH_PREFIX);
+  const autoFeatureBranchFallback = `${normalizedPrefix}/update`;
   const resolvedBase = sanitizeFeatureBranchName(
-    preferred && preferred.length > 0 ? preferred : AUTO_FEATURE_BRANCH_FALLBACK,
+    preferred && preferred.length > 0 ? preferred : autoFeatureBranchFallback,
+    normalizedPrefix,
   );
   const existingNames = new Set(existingBranchNames.map((branch) => branch.toLowerCase()));
 
@@ -58,4 +78,11 @@ export function resolveAutoFeatureBranchName(
   }
 
   return `${resolvedBase}-${suffix}`;
+}
+
+export function buildTemporaryWorktreeBranchName(
+  token: string,
+  prefix = DEFAULT_WORKTREE_BRANCH_PREFIX,
+): string {
+  return `${normalizeGitNamingSegment(prefix, DEFAULT_WORKTREE_BRANCH_PREFIX)}/${sanitizeBranchFragment(token)}`;
 }
