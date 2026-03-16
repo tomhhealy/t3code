@@ -13,7 +13,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useAppSettings } from "../appSettings";
 import { isElectron } from "../env";
 import { openInPreferredEditor } from "../editorPreferences";
-import { cn, resolveDesktopTitlebarInsetClass } from "../lib/utils";
+import { cn, resolveDesktopTitlebarInsetPx } from "../lib/utils";
 import {
   invalidateSkillsQueries,
   skillsConfigQueryOptions,
@@ -67,7 +67,7 @@ function updateLabel(status: "unknown" | "up-to-date" | "update-available") {
 }
 
 function SkillsRouteView() {
-  const desktopTitlebarInsetClass = resolveDesktopTitlebarInsetClass();
+  const desktopTitlebarInsetPx = resolveDesktopTitlebarInsetPx();
   const { settings } = useAppSettings();
   const queryClient = useQueryClient();
   const codexHomePathOverride = settings.codexHomePath.trim() || null;
@@ -243,8 +243,10 @@ function SkillsRouteView() {
           <div
             className={cn(
               "drag-region flex h-[52px] shrink-0 items-center border-b border-border px-5",
-              desktopTitlebarInsetClass,
             )}
+            style={{
+              paddingLeft: desktopTitlebarInsetPx > 0 ? `${desktopTitlebarInsetPx}px` : undefined,
+            }}
           >
             <span className="text-xs font-medium tracking-wide text-muted-foreground/70">
               Skills

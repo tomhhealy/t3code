@@ -1,11 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { isElectron } from "../env";
-import { cn, resolveDesktopTitlebarInsetClass } from "../lib/utils";
-import { SidebarTrigger } from "../components/ui/sidebar";
+import { cn, resolveDesktopTitlebarInsetPx } from "../lib/utils";
+import { SidebarTrigger, useSidebar } from "../components/ui/sidebar";
 
 function ChatIndexRouteView() {
-  const desktopTitlebarInsetClass = resolveDesktopTitlebarInsetClass();
+  const desktopTitlebarInsetPx = resolveDesktopTitlebarInsetPx();
+  const { isMobile, open: sidebarOpen } = useSidebar();
+  const shouldReserveDesktopTitlebarInset = isElectron && !isMobile && !sidebarOpen;
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-background text-muted-foreground/40">
@@ -22,8 +24,13 @@ function ChatIndexRouteView() {
         <div
           className={cn(
             "drag-region flex h-[52px] shrink-0 items-center border-b border-border px-5",
-            desktopTitlebarInsetClass,
           )}
+          style={{
+            paddingLeft:
+              shouldReserveDesktopTitlebarInset && desktopTitlebarInsetPx > 0
+                ? `${desktopTitlebarInsetPx}px`
+                : undefined,
+          }}
         >
           <span className="text-xs text-muted-foreground/50">No active thread</span>
         </div>

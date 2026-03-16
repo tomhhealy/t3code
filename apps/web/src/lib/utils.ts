@@ -16,16 +16,16 @@ export function isWindowsPlatform(platform: string): boolean {
   return /^win(dows)?/i.test(platform);
 }
 
-export function resolveDesktopTitlebarInsetClass(): string {
+export function resolveDesktopTitlebarInsetPx(): number {
   if (typeof navigator === "undefined" || typeof window === "undefined") {
-    return "";
+    return 0;
   }
 
   if (window.desktopBridge === undefined && window.nativeApi === undefined) {
-    return "";
+    return 0;
   }
 
-  return isMacPlatform(navigator.platform) ? "pl-[90px]" : "";
+  return isMacPlatform(navigator.platform) ? 90 : 0;
 }
 
 export function randomUUID(): string {

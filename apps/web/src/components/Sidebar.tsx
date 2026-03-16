@@ -44,7 +44,7 @@ import {
   isMacPlatform,
   newCommandId,
   newProjectId,
-  resolveDesktopTitlebarInsetClass,
+  resolveDesktopTitlebarInsetPx,
 } from "../lib/utils";
 import { useStore } from "../store";
 import { shortcutLabelForCommand } from "../keybindings";
@@ -258,7 +258,7 @@ function SortableProjectItem({
 }
 
 export default function Sidebar() {
-  const desktopTitlebarInsetClass = resolveDesktopTitlebarInsetClass();
+  const desktopTitlebarInsetPx = resolveDesktopTitlebarInsetPx();
   const projects = useStore((store) => store.projects);
   const threads = useStore((store) => store.threads);
   const markThreadUnread = useStore((store) => store.markThreadUnread);
@@ -1143,7 +1143,10 @@ export default function Sidebar() {
       {isElectron ? (
         <>
           <SidebarHeader
-            className={`drag-region h-[52px] flex-row items-center gap-2 px-4 py-0 ${desktopTitlebarInsetClass}`}
+            className="drag-region h-[52px] flex-row items-center gap-2 px-4 py-0"
+            style={{
+              paddingLeft: desktopTitlebarInsetPx > 0 ? `${desktopTitlebarInsetPx}px` : undefined,
+            }}
           >
             {wordmark}
             {showDesktopUpdateButton && (
