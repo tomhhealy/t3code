@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   formatRateLimitPercent,
+  formatResetCountdown,
   getLatestRateLimitSnapshot,
   getLatestTokenUsage,
   getContextWindowUsage,
@@ -73,6 +74,15 @@ describe("modelUsage", () => {
     expect(snapshot?.primary?.usedPercent).toBe(100);
     expect(snapshot?.secondary?.usedPercent).toBe(75);
     expect(summarizeRateLimitPair(snapshot)).toBe("100% / 75%");
+  });
+
+  it("formats reset countdowns with day, hour, and minute granularity", () => {
+    const now = new Date("2026-03-16T10:00:00Z").getTime();
+
+    expect(formatResetCountdown("2026-03-19T13:00:00Z", now)).toBe("Resets in 4 days");
+    expect(formatResetCountdown("2026-03-17T20:00:00Z", now)).toBe("Resets in 34 hours");
+    expect(formatResetCountdown("2026-03-16T10:45:00Z", now)).toBe("Resets in 45 min");
+    expect(formatResetCountdown("2026-03-16T10:00:30Z", now)).toBe("Resets now");
   });
 
   it("extracts token usage and context usage", () => {
