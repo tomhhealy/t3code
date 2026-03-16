@@ -103,7 +103,7 @@ import {
 import { Button } from "./ui/button";
 import { Separator } from "./ui/separator";
 import { Menu, MenuItem, MenuPopup, MenuTrigger } from "./ui/menu";
-import { cn, randomUUID } from "~/lib/utils";
+import { cn, randomUUID, resolveDesktopTitlebarInsetClass } from "~/lib/utils";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
 import { toastManager } from "./ui/toast";
 import { decodeProjectScriptKeybindingRule } from "~/lib/projectScriptKeybindings";
@@ -190,6 +190,7 @@ interface ChatViewProps {
 }
 
 export default function ChatView({ threadId }: ChatViewProps) {
+  const desktopTitlebarInsetClass = resolveDesktopTitlebarInsetClass();
   const threads = useStore((store) => store.threads);
   const projects = useStore((store) => store.projects);
   const markThreadVisited = useStore((store) => store.markThreadVisited);
@@ -3204,7 +3205,12 @@ export default function ChatView({ threadId }: ChatViewProps) {
           </header>
         )}
         {isElectron && (
-          <div className="drag-region flex h-[52px] shrink-0 items-center border-b border-border px-5">
+          <div
+            className={cn(
+              "drag-region flex h-[52px] shrink-0 items-center border-b border-border px-5",
+              desktopTitlebarInsetClass,
+            )}
+          >
             <span className="text-xs text-muted-foreground/50">No active thread</span>
           </div>
         )}
@@ -3224,6 +3230,7 @@ export default function ChatView({ threadId }: ChatViewProps) {
         className={cn(
           "border-b border-border px-3 sm:px-5",
           isElectron ? "drag-region flex h-[52px] items-center" : "py-2 sm:py-3",
+          isElectron ? desktopTitlebarInsetClass : "",
         )}
       >
         <ChatHeader

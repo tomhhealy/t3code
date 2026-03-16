@@ -16,6 +16,18 @@ export function isWindowsPlatform(platform: string): boolean {
   return /^win(dows)?/i.test(platform);
 }
 
+export function resolveDesktopTitlebarInsetClass(): string {
+  if (typeof navigator === "undefined" || typeof window === "undefined") {
+    return "";
+  }
+
+  if (window.desktopBridge === undefined && window.nativeApi === undefined) {
+    return "";
+  }
+
+  return isMacPlatform(navigator.platform) ? "pl-[90px]" : "";
+}
+
 export function randomUUID(): string {
   if (typeof crypto.randomUUID === "function") {
     return crypto.randomUUID();

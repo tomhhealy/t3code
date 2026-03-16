@@ -40,7 +40,12 @@ import { useLocation, useNavigate, useParams } from "@tanstack/react-router";
 import { useAppSettings } from "../appSettings";
 import { isElectron } from "../env";
 import { APP_STAGE_LABEL, APP_VERSION } from "../branding";
-import { isMacPlatform, newCommandId, newProjectId } from "../lib/utils";
+import {
+  isMacPlatform,
+  newCommandId,
+  newProjectId,
+  resolveDesktopTitlebarInsetClass,
+} from "../lib/utils";
 import { useStore } from "../store";
 import { shortcutLabelForCommand } from "../keybindings";
 import { derivePendingApprovals, derivePendingUserInputs } from "../session-logic";
@@ -253,6 +258,7 @@ function SortableProjectItem({
 }
 
 export default function Sidebar() {
+  const desktopTitlebarInsetClass = resolveDesktopTitlebarInsetClass();
   const projects = useStore((store) => store.projects);
   const threads = useStore((store) => store.threads);
   const markThreadUnread = useStore((store) => store.markThreadUnread);
@@ -1136,7 +1142,9 @@ export default function Sidebar() {
     <>
       {isElectron ? (
         <>
-          <SidebarHeader className="drag-region h-[52px] flex-row items-center gap-2 px-4 py-0 pl-[90px]">
+          <SidebarHeader
+            className={`drag-region h-[52px] flex-row items-center gap-2 px-4 py-0 ${desktopTitlebarInsetClass}`}
+          >
             {wordmark}
             {showDesktopUpdateButton && (
               <Tooltip>

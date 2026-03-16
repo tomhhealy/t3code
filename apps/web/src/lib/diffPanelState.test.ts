@@ -33,6 +33,20 @@ describe("areAllFilesExpanded", () => {
 });
 
 describe("readFileDiffStat", () => {
+  it("sums additions and deletions from diff hunks", () => {
+    expect(
+      readFileDiffStat({
+        hunks: [
+          { additionLines: 3, deletionLines: 1 },
+          { additionLines: 1, deletionLines: 4 },
+        ],
+      } as never),
+    ).toEqual({
+      additions: 4,
+      deletions: 5,
+    });
+  });
+
   it("reads additions and deletions from direct diff metadata fields", () => {
     expect(readFileDiffStat({ additions: 3, deletions: 1 } as never)).toEqual({
       additions: 3,

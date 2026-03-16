@@ -11,6 +11,7 @@ import {
 } from "../appSettings";
 import { resolveAndPersistPreferredEditor } from "../editorPreferences";
 import { isElectron } from "../env";
+import { cn, resolveDesktopTitlebarInsetClass } from "../lib/utils";
 import { useTheme } from "../hooks/useTheme";
 import { serverConfigQueryOptions } from "../lib/serverReactQuery";
 import { ensureNativeApi } from "../nativeApi";
@@ -104,6 +105,7 @@ function patchCustomModels(provider: ProviderKind, models: string[]) {
 }
 
 function SettingsRouteView() {
+  const desktopTitlebarInsetClass = resolveDesktopTitlebarInsetClass();
   const { theme, setTheme, resolvedTheme } = useTheme();
   const { settings, defaults, updateSettings } = useAppSettings();
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
@@ -221,7 +223,12 @@ function SettingsRouteView() {
     <SidebarInset className="h-dvh min-h-0 overflow-hidden overscroll-y-none bg-background text-foreground isolate">
       <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-background text-foreground">
         {isElectron && (
-          <div className="drag-region flex h-[52px] shrink-0 items-center border-b border-border px-5">
+          <div
+            className={cn(
+              "drag-region flex h-[52px] shrink-0 items-center border-b border-border px-5",
+              desktopTitlebarInsetClass,
+            )}
+          >
             <span className="text-xs font-medium tracking-wide text-muted-foreground/70">
               Settings
             </span>
