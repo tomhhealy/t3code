@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  DEFAULT_DIFF_FILE_EXPANSION,
   DEFAULT_APP_SETTINGS,
   DEFAULT_TIMESTAMP_FORMAT,
   getAppModelOptions,
@@ -69,5 +70,10 @@ describe("timestamp format defaults", () => {
 describe("app settings defaults", () => {
   it("defaults the open destination override to null", () => {
     expect(DEFAULT_APP_SETTINGS.defaultOpenDestination).toBeNull();
+  });
+
+  it("defaults diff file expansion to expanded", () => {
+    expect(DEFAULT_DIFF_FILE_EXPANSION).toBe("expanded");
+    expect(DEFAULT_APP_SETTINGS.defaultDiffFileExpansion).toBe("expanded");
   });
 });
