@@ -2,6 +2,7 @@ import type { GitStackedAction, GitStatusResult, ThreadId } from "@t3tools/contr
 import { useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronDownIcon, CloudUploadIcon, GitCommitIcon, InfoIcon } from "lucide-react";
+import { useAppSettings } from "../appSettings";
 import { GitHubIcon } from "./Icons";
 import {
   buildGitActionProgressStages,
@@ -154,6 +155,7 @@ function GitQuickActionIcon({ quickAction }: { quickAction: GitQuickAction }) {
 }
 
 export default function GitActionsControl({ gitCwd, activeThreadId }: GitActionsControlProps) {
+  const { settings } = useAppSettings();
   const threadToastData = useMemo(
     () => (activeThreadId ? { threadId: activeThreadId } : undefined),
     [activeThreadId],
@@ -614,7 +616,7 @@ export default function GitActionsControl({ gitCwd, activeThreadId }: GitActions
         return;
       }
       const target = resolvePathLinkTarget(filePath, gitCwd);
-      void openInPreferredEditor(api, target).catch((error) => {
+      void openInPreferredEditor(api, target, settings.defaultOpenDestination).catch((error) => {
         toastManager.add({
           type: "error",
           title: "Unable to open file",
@@ -623,7 +625,7 @@ export default function GitActionsControl({ gitCwd, activeThreadId }: GitActions
         });
       });
     },
-    [gitCwd, threadToastData],
+    [gitCwd, settings.defaultOpenDestination, threadToastData],
   );
 
   if (!gitCwd) return null;

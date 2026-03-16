@@ -10,6 +10,7 @@ import { useEffect, useRef } from "react";
 import { QueryClient, useQueryClient } from "@tanstack/react-query";
 import { Throttler } from "@tanstack/react-pacer";
 
+import { getStoredAppSettings } from "../appSettings";
 import { APP_DISPLAY_NAME } from "../branding";
 import { Button } from "../components/ui/button";
 import { AnchoredToastProvider, ToastProvider, toastManager } from "../components/ui/toast";
@@ -282,7 +283,10 @@ function EventRouter() {
             void queryClient
               .ensureQueryData(serverConfigQueryOptions())
               .then((config) => {
-                const editor = resolveAndPersistPreferredEditor(config.availableEditors);
+                const editor = resolveAndPersistPreferredEditor(
+                  config.availableEditors,
+                  getStoredAppSettings().defaultOpenDestination,
+                );
                 if (!editor) {
                   throw new Error("No available editors found.");
                 }

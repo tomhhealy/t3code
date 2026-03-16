@@ -12,6 +12,7 @@ import {
   useState,
 } from "react";
 import { Popover, PopoverPopup, PopoverTrigger } from "~/components/ui/popover";
+import { useAppSettings } from "../appSettings";
 import { openInPreferredEditor } from "../editorPreferences";
 import {
   extractTerminalLinks,
@@ -130,6 +131,7 @@ function TerminalViewport({
   resizeEpoch,
   drawerHeight,
 }: TerminalViewportProps) {
+  const { settings } = useAppSettings();
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
@@ -236,12 +238,14 @@ function TerminalViewport({
               }
 
               const target = resolvePathLinkTarget(match.text, cwd);
-              void openInPreferredEditor(api, target).catch((error) => {
-                writeSystemMessage(
-                  latestTerminal,
-                  error instanceof Error ? error.message : "Unable to open path",
-                );
-              });
+              void openInPreferredEditor(api, target, settings.defaultOpenDestination).catch(
+                (error) => {
+                  writeSystemMessage(
+                    latestTerminal,
+                    error instanceof Error ? error.message : "Unable to open path",
+                  );
+                },
+              );
             },
           })),
         );

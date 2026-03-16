@@ -1,17 +1,42 @@
 import { EditorId, type ResolvedKeybindingsConfig } from "@t3tools/contracts";
 import { memo, useCallback, useEffect, useMemo } from "react";
+import { useAppSettings } from "../../appSettings";
 import { isOpenFavoriteEditorShortcut, shortcutLabelForCommand } from "../../keybindings";
 import { usePreferredEditor } from "../../editorPreferences";
 import { ChevronDownIcon, FolderClosedIcon } from "lucide-react";
 import { Button } from "../ui/button";
 import { Group, GroupSeparator } from "../ui/group";
 import { Menu, MenuItem, MenuPopup, MenuShortcut, MenuTrigger } from "../ui/menu";
-import { AntigravityIcon, CursorIcon, Icon, VisualStudioCode, Zed } from "../Icons";
+import {
+  AntigravityIcon,
+  CursorIcon,
+  GhosttyIcon,
+  Icon,
+  ITermIcon,
+  TerminalAppIcon,
+  VisualStudioCode,
+  Zed,
+} from "../Icons";
 import { isMacPlatform, isWindowsPlatform } from "~/lib/utils";
 import { readNativeApi } from "~/nativeApi";
 
 const resolveOptions = (platform: string, availableEditors: ReadonlyArray<EditorId>) => {
   const baseOptions: ReadonlyArray<{ label: string; Icon: Icon; value: EditorId }> = [
+    {
+      label: "Terminal",
+      Icon: TerminalAppIcon,
+      value: "terminal",
+    },
+    {
+      label: "Ghostty",
+      Icon: GhosttyIcon,
+      value: "ghostty",
+    },
+    {
+      label: "iTerm",
+      Icon: ITermIcon,
+      value: "iterm",
+    },
     {
       label: "Cursor",
       Icon: CursorIcon,
@@ -54,7 +79,11 @@ export const OpenInPicker = memo(function OpenInPicker({
   availableEditors: ReadonlyArray<EditorId>;
   openInCwd: string | null;
 }) {
-  const [preferredEditor, setPreferredEditor] = usePreferredEditor(availableEditors);
+  const { settings } = useAppSettings();
+  const [preferredEditor, setPreferredEditor] = usePreferredEditor(
+    availableEditors,
+    settings.defaultOpenDestination,
+  );
   const options = useMemo(
     () => resolveOptions(navigator.platform, availableEditors),
     [availableEditors],

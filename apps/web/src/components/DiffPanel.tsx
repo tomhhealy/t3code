@@ -308,11 +308,13 @@ export default function DiffPanel({ mode = "inline" }: DiffPanelProps) {
       const api = readNativeApi();
       if (!api) return;
       const targetPath = activeCwd ? resolvePathLinkTarget(filePath, activeCwd) : filePath;
-      void openInPreferredEditor(api, targetPath).catch((error) => {
-        console.warn("Failed to open diff file in editor.", error);
-      });
+      void openInPreferredEditor(api, targetPath, settings.defaultOpenDestination).catch(
+        (error) => {
+          console.warn("Failed to open diff file in editor.", error);
+        },
+      );
     },
-    [activeCwd],
+    [activeCwd, settings.defaultOpenDestination],
   );
 
   const selectTurn = (turnId: TurnId) => {

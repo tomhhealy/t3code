@@ -1,10 +1,10 @@
 import { useCallback } from "react";
 import { Option, Schema } from "effect";
-import { type ProviderKind } from "@t3tools/contracts";
+import { EditorId, type ProviderKind } from "@t3tools/contracts";
 import { getDefaultModel, getModelOptions, normalizeModelSlug } from "@t3tools/shared/model";
-import { useLocalStorage } from "./hooks/useLocalStorage";
+import { getLocalStorageItem, useLocalStorage } from "./hooks/useLocalStorage";
 
-const APP_SETTINGS_STORAGE_KEY = "t3code:app-settings:v1";
+export const APP_SETTINGS_STORAGE_KEY = "t3code:app-settings:v1";
 const MAX_CUSTOM_MODEL_COUNT = 32;
 export const MAX_CUSTOM_MODEL_LENGTH = 256;
 export const TIMESTAMP_FORMAT_OPTIONS = ["locale", "12-hour", "24-hour"] as const;
@@ -14,7 +14,7 @@ const BUILT_IN_MODEL_SLUGS_BY_PROVIDER: Record<ProviderKind, ReadonlySet<string>
   codex: new Set(getModelOptions("codex").map((option) => option.slug)),
 };
 
-const AppSettingsSchema = Schema.Struct({
+export const AppSettingsSchema = Schema.Struct({
   codexBinaryPath: Schema.String.check(Schema.isMaxLength(4096)).pipe(
     Schema.withConstructorDefault(() => Option.some("")),
   ),
@@ -23,6 +23,9 @@ const AppSettingsSchema = Schema.Struct({
   ),
   defaultThreadEnvMode: Schema.Literals(["local", "worktree"]).pipe(
     Schema.withConstructorDefault(() => Option.some("local")),
+  ),
+  defaultOpenDestination: Schema.NullOr(EditorId).pipe(
+    Schema.withConstructorDefault(() => Option.some(null)),
   ),
   confirmThreadDelete: Schema.Boolean.pipe(Schema.withConstructorDefault(() => Option.some(true))),
   enableAssistantStreaming: Schema.Boolean.pipe(
@@ -42,7 +45,7 @@ export interface AppModelOption {
   isCustom: boolean;
 }
 
-const DEFAULT_APP_SETTINGS = AppSettingsSchema.makeUnsafe({});
+export const DEFAULT_APP_SETTINGS = AppSettingsSchema.makeUnsafe({});
 
 export function normalizeCustomModelSlugs(
   models: Iterable<string | null | undefined>,
@@ -169,4 +172,8 @@ export function useAppSettings() {
     resetSettings,
     defaults: DEFAULT_APP_SETTINGS,
   } as const;
+}
+
+export function getStoredAppSettings(): AppSettings {
+  return getLocalStorageItem(APP_SETTINGS_STORAGE_KEY, AppSettingsSchema) ?? DEFAULT_APP_SETTINGS;
 }

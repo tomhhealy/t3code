@@ -16,6 +16,7 @@ import React, {
 import type { Components } from "react-markdown";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { useAppSettings } from "../appSettings";
 import { openInPreferredEditor } from "../editorPreferences";
 import { resolveDiffThemeName, type DiffThemeName } from "../lib/diffRendering";
 import { fnv1a32 } from "../lib/diffRendering";
@@ -237,6 +238,7 @@ function SuspenseShikiCodeBlock({
 
 function ChatMarkdown({ text, cwd, isStreaming = false }: ChatMarkdownProps) {
   const { resolvedTheme } = useTheme();
+  const { settings } = useAppSettings();
   const diffThemeName = resolveDiffThemeName(resolvedTheme);
   const markdownComponents = useMemo<Components>(
     () => ({
@@ -255,7 +257,7 @@ function ChatMarkdown({ text, cwd, isStreaming = false }: ChatMarkdownProps) {
               event.stopPropagation();
               const api = readNativeApi();
               if (api) {
-                void openInPreferredEditor(api, targetPath);
+                void openInPreferredEditor(api, targetPath, settings.defaultOpenDestination);
               } else {
                 console.warn("Native API not found. Unable to open file in editor.");
               }
@@ -285,7 +287,7 @@ function ChatMarkdown({ text, cwd, isStreaming = false }: ChatMarkdownProps) {
         );
       },
     }),
-    [cwd, diffThemeName, isStreaming],
+    [cwd, diffThemeName, isStreaming, settings.defaultOpenDestination],
   );
 
   return (

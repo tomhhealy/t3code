@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  DEFAULT_APP_SETTINGS,
   DEFAULT_TIMESTAMP_FORMAT,
   getAppModelOptions,
   normalizeCustomModelSlugs,
@@ -62,5 +63,11 @@ describe("resolveAppModelSelection", () => {
 describe("timestamp format defaults", () => {
   it("defaults timestamp format to locale", () => {
     expect(DEFAULT_TIMESTAMP_FORMAT).toBe("locale");
+  });
+});
+
+describe("app settings defaults", () => {
+  it("defaults the open destination override to null", () => {
+    expect(DEFAULT_APP_SETTINGS.defaultOpenDestination).toBeNull();
   });
 });

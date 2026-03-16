@@ -13,6 +13,33 @@ import {
 it.layer(NodeServices.layer)("resolveEditorLaunch", (it) => {
   it.effect("returns commands for command-based editors", () =>
     Effect.gen(function* () {
+      const terminalLaunch = yield* resolveEditorLaunch(
+        { cwd: "/tmp/workspace", editor: "terminal" },
+        "darwin",
+      );
+      assert.deepEqual(terminalLaunch, {
+        command: "open",
+        args: ["-a", "Terminal", "/tmp/workspace"],
+      });
+
+      const ghosttyLaunch = yield* resolveEditorLaunch(
+        { cwd: "/tmp/workspace", editor: "ghostty" },
+        "darwin",
+      );
+      assert.deepEqual(ghosttyLaunch, {
+        command: "open",
+        args: ["-a", "Ghostty", "/tmp/workspace"],
+      });
+
+      const iTermLaunch = yield* resolveEditorLaunch(
+        { cwd: "/tmp/workspace", editor: "iterm" },
+        "darwin",
+      );
+      assert.deepEqual(iTermLaunch, {
+        command: "open",
+        args: ["-a", "iTerm", "/tmp/workspace"],
+      });
+
       const antigravityLaunch = yield* resolveEditorLaunch(
         { cwd: "/tmp/workspace", editor: "antigravity" },
         "darwin",
@@ -229,4 +256,11 @@ it.layer(NodeServices.layer)("resolveAvailableEditors", (it) => {
       assert.deepEqual(editors, ["cursor", "file-manager"]);
     }),
   );
+
+  it("does not expose macOS terminal apps on non-mac platforms", () => {
+    const editors = resolveAvailableEditors("linux", {
+      PATH: "",
+    });
+    assert.deepEqual(editors, []);
+  });
 });

@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
-import { type ProviderKind } from "@t3tools/contracts";
+import { EDITORS, type EditorId, type ProviderKind } from "@t3tools/contracts";
+import { RotateCcwIcon } from "lucide-react";
 import { getModelOptions, normalizeModelSlug } from "@t3tools/shared/model";
 import { MAX_CUSTOM_MODEL_LENGTH, useAppSettings } from "../appSettings";
 import { resolveAndPersistPreferredEditor } from "../editorPreferences";
@@ -19,6 +20,7 @@ import {
   SelectValue,
 } from "../components/ui/select";
 import { Switch } from "../components/ui/switch";
+import { Tooltip, TooltipPopup, TooltipTrigger } from "../components/ui/tooltip";
 import { APP_VERSION } from "../branding";
 import { SidebarInset } from "~/components/ui/sidebar";
 
@@ -111,13 +113,20 @@ function SettingsRouteView() {
   const codexHomePath = settings.codexHomePath;
   const keybindingsConfigPath = serverConfigQuery.data?.keybindingsConfigPath ?? null;
   const availableEditors = serverConfigQuery.data?.availableEditors;
+  const defaultOpenDestinationValue = settings.defaultOpenDestination ?? "last-used";
+  const defaultOpenDestinationOptions = EDITORS.filter((editor) =>
+    (availableEditors ?? []).includes(editor.id),
+  );
 
   const openKeybindingsFile = useCallback(() => {
     if (!keybindingsConfigPath) return;
     setOpenKeybindingsError(null);
     setIsOpeningKeybindings(true);
     const api = ensureNativeApi();
-    const editor = resolveAndPersistPreferredEditor(availableEditors ?? []);
+    const editor = resolveAndPersistPreferredEditor(
+      availableEditors ?? [],
+      settings.defaultOpenDestination,
+    );
     if (!editor) {
       setOpenKeybindingsError("No available editors found.");
       setIsOpeningKeybindings(false);
@@ -133,7 +142,7 @@ function SettingsRouteView() {
       .finally(() => {
         setIsOpeningKeybindings(false);
       });
-  }, [availableEditors, keybindingsConfigPath]);
+  }, [availableEditors, keybindingsConfigPath, settings.defaultOpenDestination]);
 
   const addCustomModel = useCallback(
     (provider: ProviderKind) => {
@@ -510,22 +519,82 @@ function SettingsRouteView() {
                 </p>
               </div>
 
-              <div className="flex items-center justify-between rounded-lg border border-border bg-background px-3 py-2">
-                <div>
-                  <p className="text-sm font-medium text-foreground">Default to New worktree</p>
-                  <p className="text-xs text-muted-foreground">
-                    New threads start in New worktree mode instead of Local.
-                  </p>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between rounded-lg border border-border bg-background px-3 py-2">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Default to New worktree</p>
+                    <p className="text-xs text-muted-foreground">
+                      New threads start in New worktree mode instead of Local.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={settings.defaultThreadEnvMode === "worktree"}
+                    onCheckedChange={(checked) =>
+                      updateSettings({
+                        defaultThreadEnvMode: checked ? "worktree" : "local",
+                      })
+                    }
+                    aria-label="Default new threads to New worktree mode"
+                  />
                 </div>
-                <Switch
-                  checked={settings.defaultThreadEnvMode === "worktree"}
-                  onCheckedChange={(checked) =>
-                    updateSettings({
-                      defaultThreadEnvMode: checked ? "worktree" : "local",
-                    })
-                  }
-                  aria-label="Default new threads to New worktree mode"
-                />
+
+                <div className="flex items-center justify-between rounded-lg border border-border bg-background px-3 py-2">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Default open destination</p>
+                    <p className="text-xs text-muted-foreground">
+                      Overrides the last-used open target for shortcuts like <code>Cmd+O</code>.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {settings.defaultOpenDestination !== defaults.defaultOpenDestination ? (
+                      <Tooltip>
+                        <TooltipTrigger
+                          render={
+                            <Button
+                              size="icon-xs"
+                              variant="outline"
+                              aria-label="Reset to default"
+                              onClick={() => updateSettings({ defaultOpenDestination: null })}
+                            />
+                          }
+                        >
+                          <RotateCcwIcon aria-hidden="true" className="size-3.5" />
+                        </TooltipTrigger>
+                        <TooltipPopup side="top">Reset to default</TooltipPopup>
+                      </Tooltip>
+                    ) : null}
+                    <Select
+                      value={defaultOpenDestinationValue}
+                      onValueChange={(value) => {
+                        if (value === "last-used") {
+                          updateSettings({ defaultOpenDestination: null });
+                          return;
+                        }
+                        if (!defaultOpenDestinationOptions.some((option) => option.id === value))
+                          return;
+                        updateSettings({ defaultOpenDestination: value as EditorId });
+                      }}
+                    >
+                      <SelectTrigger className="w-48" aria-label="Default open destination">
+                        <SelectValue>
+                          {settings.defaultOpenDestination
+                            ? (EDITORS.find(
+                                (editor) => editor.id === settings.defaultOpenDestination,
+                              )?.label ?? "Last used")
+                            : "Last used"}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectPopup align="end">
+                        <SelectItem value="last-used">Last used</SelectItem>
+                        {defaultOpenDestinationOptions.map((editor) => (
+                          <SelectItem key={editor.id} value={editor.id}>
+                            {editor.label}
+                          </SelectItem>
+                        ))}
+                      </SelectPopup>
+                    </Select>
+                  </div>
+                </div>
               </div>
 
               {settings.defaultThreadEnvMode !== defaults.defaultThreadEnvMode ? (

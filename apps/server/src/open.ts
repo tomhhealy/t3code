@@ -6,7 +6,7 @@
  *
  * @module Open
  */
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { accessSync, constants, statSync } from "node:fs";
 import { extname, join } from "node:path";
 
@@ -54,6 +54,24 @@ function fileManagerCommandForPlatform(platform: NodeJS.Platform): string {
     default:
       return "xdg-open";
   }
+}
+
+function macAppNameForEditor(editorId: EditorId): string | null {
+  switch (editorId) {
+    case "terminal":
+      return "Terminal";
+    case "ghostty":
+      return "Ghostty";
+    case "iterm":
+      return "iTerm";
+    default:
+      return null;
+  }
+}
+
+function isMacApplicationAvailable(appName: string): boolean {
+  const result = spawnSync("open", ["-Ra", appName], { stdio: "ignore" });
+  return result.status === 0;
 }
 
 function stripWrappingQuotes(value: string): string {
@@ -168,6 +186,14 @@ export function resolveAvailableEditors(
   const available: EditorId[] = [];
 
   for (const editor of EDITORS) {
+    const macAppName = platform === "darwin" ? macAppNameForEditor(editor.id) : null;
+    if (macAppName) {
+      if (isMacApplicationAvailable(macAppName)) {
+        available.push(editor.id);
+      }
+      continue;
+    }
+
     const command = editor.command ?? fileManagerCommandForPlatform(platform);
     if (isCommandAvailable(command, { platform, env })) {
       available.push(editor.id);
@@ -216,6 +242,11 @@ export const resolveEditorLaunch = Effect.fnUntraced(function* (
     return shouldUseGotoFlag(editorDef.id, input.cwd)
       ? { command: editorDef.command, args: ["--goto", input.cwd] }
       : { command: editorDef.command, args: [input.cwd] };
+  }
+
+  const macAppName = platform === "darwin" ? macAppNameForEditor(editorDef.id) : null;
+  if (macAppName) {
+    return { command: "open", args: ["-a", macAppName, input.cwd] };
   }
 
   if (editorDef.id !== "file-manager") {

@@ -2,6 +2,9 @@ import { Schema } from "effect";
 import { TrimmedNonEmptyString } from "./baseSchemas";
 
 export const EDITORS = [
+  { id: "terminal", label: "Terminal", command: null },
+  { id: "ghostty", label: "Ghostty", command: null },
+  { id: "iterm", label: "iTerm", command: null },
   { id: "cursor", label: "Cursor", command: "cursor" },
   { id: "vscode", label: "VS Code", command: "code" },
   { id: "zed", label: "Zed", command: "zed" },
