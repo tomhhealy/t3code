@@ -79,6 +79,11 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           workspaceRoot: command.workspaceRoot,
           defaultModel: command.defaultModel ?? null,
           scripts: [],
+          gitNaming: {
+            worktreeBranchPrefix: null,
+            featureBranchPrefix: null,
+            worktreeRootName: null,
+          },
           createdAt: command.createdAt,
           updatedAt: command.createdAt,
         },
@@ -106,6 +111,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           ...(command.workspaceRoot !== undefined ? { workspaceRoot: command.workspaceRoot } : {}),
           ...(command.defaultModel !== undefined ? { defaultModel: command.defaultModel } : {}),
           ...(command.scripts !== undefined ? { scripts: command.scripts } : {}),
+          ...(command.gitNaming !== undefined ? { gitNaming: command.gitNaming } : {}),
           updatedAt: occurredAt,
         },
       };

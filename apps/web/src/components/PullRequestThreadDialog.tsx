@@ -25,6 +25,7 @@ import { Spinner } from "./ui/spinner";
 interface PullRequestThreadDialogProps {
   open: boolean;
   cwd: string | null;
+  worktreeRootName: string;
   initialReference: string | null;
   onOpenChange: (open: boolean) => void;
   onPrepared: (input: { branch: string; worktreePath: string | null }) => Promise<void> | void;
@@ -33,6 +34,7 @@ interface PullRequestThreadDialogProps {
 export function PullRequestThreadDialog({
   open,
   cwd,
+  worktreeRootName,
   initialReference,
   onOpenChange,
   onPrepared,
@@ -130,6 +132,7 @@ export function PullRequestThreadDialog({
         const result = await preparePullRequestThreadMutation.mutateAsync({
           reference: parsedReference,
           mode,
+          ...(mode === "worktree" ? { worktreeRootName } : {}),
         });
         await onPrepared({
           branch: result.branch,
@@ -147,6 +150,7 @@ export function PullRequestThreadDialog({
       parsedReference,
       preparePullRequestThreadMutation,
       resolvedPullRequest,
+      worktreeRootName,
     ],
   );
 

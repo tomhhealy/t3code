@@ -119,11 +119,13 @@ export function gitRunStackedActionMutationOptions(input: {
       action,
       commitMessage,
       featureBranch,
+      featureBranchPrefix,
       filePaths,
     }: {
       action: GitStackedAction;
       commitMessage?: string;
       featureBranch?: boolean;
+      featureBranchPrefix?: string;
       filePaths?: string[];
     }) => {
       const api = ensureNativeApi();
@@ -133,6 +135,7 @@ export function gitRunStackedActionMutationOptions(input: {
         action,
         ...(commitMessage ? { commitMessage } : {}),
         ...(featureBranch ? { featureBranch } : {}),
+        ...(featureBranchPrefix ? { featureBranchPrefix } : {}),
         ...(filePaths ? { filePaths } : {}),
       });
     },
@@ -163,15 +166,23 @@ export function gitCreateWorktreeMutationOptions(input: { queryClient: QueryClie
       branch,
       newBranch,
       path,
+      worktreeRootName,
     }: {
       cwd: string;
       branch: string;
       newBranch: string;
       path?: string | null;
+      worktreeRootName?: string;
     }) => {
       const api = ensureNativeApi();
       if (!cwd) throw new Error("Git worktree creation is unavailable.");
-      return api.git.createWorktree({ cwd, branch, newBranch, path: path ?? null });
+      return api.git.createWorktree({
+        cwd,
+        branch,
+        newBranch,
+        path: path ?? null,
+        ...(worktreeRootName ? { worktreeRootName } : {}),
+      });
     },
     mutationKey: ["git", "mutation", "create-worktree"] as const,
     onSettled: async () => {
@@ -199,13 +210,22 @@ export function gitPreparePullRequestThreadMutationOptions(input: {
   queryClient: QueryClient;
 }) {
   return mutationOptions({
-    mutationFn: async ({ reference, mode }: { reference: string; mode: "local" | "worktree" }) => {
+    mutationFn: async ({
+      reference,
+      mode,
+      worktreeRootName,
+    }: {
+      reference: string;
+      mode: "local" | "worktree";
+      worktreeRootName?: string;
+    }) => {
       const api = ensureNativeApi();
       if (!input.cwd) throw new Error("Pull request thread preparation is unavailable.");
       return api.git.preparePullRequestThread({
         cwd: input.cwd,
         reference,
         mode,
+        ...(worktreeRootName ? { worktreeRootName } : {}),
       });
     },
     mutationKey: gitMutationKeys.preparePullRequestThread(input.cwd),

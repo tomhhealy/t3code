@@ -19,6 +19,11 @@ import {
 } from "./commandInvariants.ts";
 
 const now = new Date().toISOString();
+const EMPTY_PROJECT_GIT_NAMING = {
+  worktreeBranchPrefix: null,
+  featureBranchPrefix: null,
+  worktreeRootName: null,
+} as const;
 
 const readModel: OrchestrationReadModel = {
   snapshotSequence: 2,
@@ -30,6 +35,7 @@ const readModel: OrchestrationReadModel = {
       workspaceRoot: "/tmp/project-a",
       defaultModel: "gpt-5-codex",
       scripts: [],
+      gitNaming: { ...EMPTY_PROJECT_GIT_NAMING },
       createdAt: now,
       updatedAt: now,
       deletedAt: null,
@@ -40,6 +46,7 @@ const readModel: OrchestrationReadModel = {
       workspaceRoot: "/tmp/project-b",
       defaultModel: "gpt-5-codex",
       scripts: [],
+      gitNaming: { ...EMPTY_PROJECT_GIT_NAMING },
       createdAt: now,
       updatedAt: now,
       deletedAt: null,

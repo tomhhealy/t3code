@@ -14,6 +14,7 @@ import {
 } from "@t3tools/contracts";
 import { Cache, Cause, Duration, Effect, Layer, Option, Schema, Stream } from "effect";
 import { makeDrainableWorker } from "@t3tools/shared/DrainableWorker";
+import { DEFAULT_WORKTREE_BRANCH_PREFIX, normalizeGitNamingSegment } from "@t3tools/shared/git";
 
 import { resolveThreadWorkspaceCwd } from "../../checkpointing/Utils.ts";
 import { GitCore } from "../../git/Services/GitCore.ts";
@@ -71,9 +72,6 @@ const serverCommandId = (tag: string): CommandId =>
 const HANDLED_TURN_START_KEY_MAX = 10_000;
 const HANDLED_TURN_START_KEY_TTL = Duration.minutes(30);
 const DEFAULT_RUNTIME_MODE: RuntimeMode = "full-access";
-const WORKTREE_BRANCH_PREFIX = "t3code";
-const TEMP_WORKTREE_BRANCH_PATTERN = new RegExp(`^${WORKTREE_BRANCH_PREFIX}\\/[0-9a-f]{8}$`);
-
 function isUnknownPendingApprovalRequestError(cause: Cause.Cause<ProviderServiceError>): boolean {
   const error = Cause.squash(cause);
   if (Schema.is(ProviderAdapterRequestError)(error)) {
@@ -90,19 +88,21 @@ function isUnknownPendingApprovalRequestError(cause: Cause.Cause<ProviderService
   );
 }
 
-function isTemporaryWorktreeBranch(branch: string): boolean {
-  return TEMP_WORKTREE_BRANCH_PATTERN.test(branch.trim().toLowerCase());
+function isTemporaryWorktreeBranch(branch: string, prefix?: string | null): boolean {
+  const normalizedPrefix = normalizeGitNamingSegment(prefix, DEFAULT_WORKTREE_BRANCH_PREFIX);
+  return new RegExp(`^${normalizedPrefix}\\/[0-9a-f]{8}$`).test(branch.trim().toLowerCase());
 }
 
-function buildGeneratedWorktreeBranchName(raw: string): string {
+function buildGeneratedWorktreeBranchName(raw: string, prefix?: string | null): string {
+  const normalizedPrefix = normalizeGitNamingSegment(prefix, DEFAULT_WORKTREE_BRANCH_PREFIX);
   const normalized = raw
     .trim()
     .toLowerCase()
     .replace(/^refs\/heads\//, "")
     .replace(/['"`]/g, "");
 
-  const withoutPrefix = normalized.startsWith(`${WORKTREE_BRANCH_PREFIX}/`)
-    ? normalized.slice(`${WORKTREE_BRANCH_PREFIX}/`.length)
+  const withoutPrefix = normalized.startsWith(`${normalizedPrefix}/`)
+    ? normalized.slice(`${normalizedPrefix}/`.length)
     : normalized;
 
   const branchFragment = withoutPrefix
@@ -114,7 +114,7 @@ function buildGeneratedWorktreeBranchName(raw: string): string {
     .replace(/[./_-]+$/g, "");
 
   const safeFragment = branchFragment.length > 0 ? branchFragment : "update";
-  return `${WORKTREE_BRANCH_PREFIX}/${safeFragment}`;
+  return `${normalizedPrefix}/${safeFragment}`;
 }
 
 const make = Effect.gen(function* () {
@@ -369,12 +369,16 @@ const make = Effect.gen(function* () {
     if (!input.branch || !input.worktreePath) {
       return;
     }
-    if (!isTemporaryWorktreeBranch(input.branch)) {
-      return;
-    }
 
     const thread = yield* resolveThread(input.threadId);
     if (!thread) {
+      return;
+    }
+    const project = (yield* orchestrationEngine.getReadModel()).projects.find(
+      (entry) => entry.id === thread.projectId,
+    );
+    const worktreeBranchPrefix = project?.gitNaming.worktreeBranchPrefix ?? null;
+    if (!isTemporaryWorktreeBranch(input.branch, worktreeBranchPrefix)) {
       return;
     }
 
@@ -402,7 +406,10 @@ const make = Effect.gen(function* () {
         Effect.flatMap((generated) => {
           if (!generated) return Effect.void;
 
-          const targetBranch = buildGeneratedWorktreeBranchName(generated.branch);
+          const targetBranch = buildGeneratedWorktreeBranchName(
+            generated.branch,
+            worktreeBranchPrefix,
+          );
           if (targetBranch === oldBranch) return Effect.void;
 
           return Effect.flatMap(

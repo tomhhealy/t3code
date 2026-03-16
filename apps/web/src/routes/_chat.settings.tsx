@@ -565,6 +565,65 @@ function SettingsRouteView() {
 
             <section className="rounded-2xl border border-border bg-card p-5">
               <div className="mb-4">
+                <h2 className="text-sm font-medium text-foreground">Git Naming</h2>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Default prefixes and worktree folder names for new branches and worktrees.
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <label className="grid gap-1.5">
+                  <span className="text-sm font-medium text-foreground">
+                    Worktree branch prefix
+                  </span>
+                  <Input
+                    value={settings.worktreeBranchPrefix}
+                    onChange={(event) =>
+                      updateSettings({ worktreeBranchPrefix: event.target.value })
+                    }
+                  />
+                </label>
+                <label className="grid gap-1.5">
+                  <span className="text-sm font-medium text-foreground">Feature branch prefix</span>
+                  <Input
+                    value={settings.featureBranchPrefix}
+                    onChange={(event) =>
+                      updateSettings({ featureBranchPrefix: event.target.value })
+                    }
+                  />
+                </label>
+                <label className="grid gap-1.5">
+                  <span className="text-sm font-medium text-foreground">Worktree root folder</span>
+                  <Input
+                    value={settings.worktreeRootName}
+                    onChange={(event) => updateSettings({ worktreeRootName: event.target.value })}
+                  />
+                </label>
+              </div>
+
+              {settings.worktreeBranchPrefix !== defaults.worktreeBranchPrefix ||
+              settings.featureBranchPrefix !== defaults.featureBranchPrefix ||
+              settings.worktreeRootName !== defaults.worktreeRootName ? (
+                <div className="mt-3 flex justify-end">
+                  <Button
+                    size="xs"
+                    variant="outline"
+                    onClick={() =>
+                      updateSettings({
+                        worktreeBranchPrefix: defaults.worktreeBranchPrefix,
+                        featureBranchPrefix: defaults.featureBranchPrefix,
+                        worktreeRootName: defaults.worktreeRootName,
+                      })
+                    }
+                  >
+                    Restore defaults
+                  </Button>
+                </div>
+              ) : null}
+            </section>
+
+            <section className="rounded-2xl border border-border bg-card p-5">
+              <div className="mb-4">
                 <h2 className="text-sm font-medium text-foreground">Threads</h2>
                 <p className="mt-1 text-xs text-muted-foreground">
                   Choose the default workspace mode for newly created draft threads.

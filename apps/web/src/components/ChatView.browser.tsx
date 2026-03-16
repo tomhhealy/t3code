@@ -199,6 +199,11 @@ function createSnapshotForTargetUser(options: {
         workspaceRoot: "/repo/project",
         defaultModel: "gpt-5",
         scripts: [],
+        gitNaming: {
+          worktreeBranchPrefix: null,
+          featureBranchPrefix: null,
+          worktreeRootName: null,
+        },
         createdAt: NOW_ISO,
         updatedAt: NOW_ISO,
         deletedAt: null,

@@ -1,4 +1,5 @@
 import { Cache, Data, Duration, Effect, Exit, FileSystem, Layer, Path } from "effect";
+import { DEFAULT_WORKTREE_ROOT_NAME, normalizeGitNamingSegment } from "@t3tools/shared/git";
 
 import { GitCommandError } from "../Errors.ts";
 import { GitService } from "../Services/GitService.ts";
@@ -1187,8 +1188,12 @@ const makeGitCore = Effect.gen(function* () {
       const sanitizedBranch = targetBranch.replace(/\//g, "-");
       const repoName = path.basename(input.cwd);
       const homeDir = process.env.HOME ?? process.env.USERPROFILE ?? "/tmp";
+      const worktreeRootName = normalizeGitNamingSegment(
+        input.worktreeRootName,
+        DEFAULT_WORKTREE_ROOT_NAME,
+      );
       const worktreePath =
-        input.path ?? path.join(homeDir, ".t3", "worktrees", repoName, sanitizedBranch);
+        input.path ?? path.join(homeDir, ".t3", worktreeRootName, repoName, sanitizedBranch);
       const args = input.newBranch
         ? ["worktree", "add", "-b", input.newBranch, worktreePath, input.branch]
         : ["worktree", "add", worktreePath, input.branch];

@@ -3,6 +3,7 @@ import type {
   OrchestrationProposedPlanId,
   OrchestrationSessionStatus,
   OrchestrationThreadActivity,
+  ProjectGitNamingSettings as ContractProjectGitNamingSettings,
   ProjectScript as ContractProjectScript,
   ThreadId,
   ProjectId,
@@ -22,6 +23,7 @@ export const DEFAULT_THREAD_TERMINAL_HEIGHT = 280;
 export const DEFAULT_THREAD_TERMINAL_ID = "default";
 export const MAX_TERMINALS_PER_GROUP = 4;
 export type ProjectScript = ContractProjectScript;
+export type ProjectGitNamingSettings = ContractProjectGitNamingSettings;
 
 export interface ThreadTerminalGroup {
   id: string;
@@ -81,6 +83,7 @@ export interface Project {
   model: string;
   expanded: boolean;
   scripts: ProjectScript[];
+  gitNaming: ProjectGitNamingSettings;
 }
 
 export interface Thread {

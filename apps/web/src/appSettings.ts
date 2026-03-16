@@ -2,6 +2,11 @@ import { useCallback } from "react";
 import { Option, Schema } from "effect";
 import { EditorId, type ProviderKind } from "@t3tools/contracts";
 import { getDefaultModel, getModelOptions, normalizeModelSlug } from "@t3tools/shared/model";
+import {
+  DEFAULT_FEATURE_BRANCH_PREFIX,
+  DEFAULT_WORKTREE_BRANCH_PREFIX,
+  DEFAULT_WORKTREE_ROOT_NAME,
+} from "@t3tools/shared/git";
 import { getLocalStorageItem, useLocalStorage } from "./hooks/useLocalStorage";
 
 export const APP_SETTINGS_STORAGE_KEY = "t3code:app-settings:v1";
@@ -43,6 +48,15 @@ export const AppSettingsSchema = Schema.Struct({
   customCodexModels: Schema.Array(Schema.String).pipe(
     Schema.withConstructorDefault(() => Option.some([])),
   ),
+  worktreeBranchPrefix: Schema.String.check(Schema.isMaxLength(128)).pipe(
+    Schema.withConstructorDefault(() => Option.some(DEFAULT_WORKTREE_BRANCH_PREFIX)),
+  ),
+  featureBranchPrefix: Schema.String.check(Schema.isMaxLength(128)).pipe(
+    Schema.withConstructorDefault(() => Option.some(DEFAULT_FEATURE_BRANCH_PREFIX)),
+  ),
+  worktreeRootName: Schema.String.check(Schema.isMaxLength(128)).pipe(
+    Schema.withConstructorDefault(() => Option.some(DEFAULT_WORKTREE_ROOT_NAME)),
+  ),
 });
 export type AppSettings = typeof AppSettingsSchema.Type;
 export interface AppModelOption {
@@ -51,7 +65,33 @@ export interface AppModelOption {
   isCustom: boolean;
 }
 
+export interface EffectiveGitNamingSettings {
+  worktreeBranchPrefix: string;
+  featureBranchPrefix: string;
+  worktreeRootName: string;
+}
+
 export const DEFAULT_APP_SETTINGS = AppSettingsSchema.makeUnsafe({});
+
+export function resolveEffectiveGitNamingSettings(input: {
+  globalSettings: AppSettings;
+  projectGitNaming?: {
+    worktreeBranchPrefix: string | null;
+    featureBranchPrefix: string | null;
+    worktreeRootName: string | null;
+  } | null;
+}): EffectiveGitNamingSettings {
+  return {
+    worktreeBranchPrefix:
+      input.projectGitNaming?.worktreeBranchPrefix?.trim() ||
+      input.globalSettings.worktreeBranchPrefix,
+    featureBranchPrefix:
+      input.projectGitNaming?.featureBranchPrefix?.trim() ||
+      input.globalSettings.featureBranchPrefix,
+    worktreeRootName:
+      input.projectGitNaming?.worktreeRootName?.trim() || input.globalSettings.worktreeRootName,
+  };
+}
 
 export function normalizeCustomModelSlugs(
   models: Iterable<string | null | undefined>,

@@ -1,6 +1,7 @@
 import {
   type EditorId,
   type OrchestrationThreadActivity,
+  type ProjectGitNamingSettings,
   type ProjectScript,
   type ResolvedKeybindingsConfig,
   type ThreadId,
@@ -8,6 +9,7 @@ import {
 import { DiffIcon } from "lucide-react";
 import { memo } from "react";
 import GitActionsControl from "../GitActionsControl";
+import ProjectGitNamingControl from "../ProjectGitNamingControl";
 import ProjectScriptsControl, { type NewProjectScriptInput } from "../ProjectScriptsControl";
 import { Badge } from "../ui/badge";
 import { SidebarTrigger } from "../ui/sidebar";
@@ -24,6 +26,12 @@ interface ChatHeaderProps {
   isGitRepo: boolean;
   openInCwd: string | null;
   activeProjectScripts: ProjectScript[] | undefined;
+  activeProjectGitNaming: ProjectGitNamingSettings | undefined;
+  effectiveGitNaming: {
+    worktreeBranchPrefix: string;
+    featureBranchPrefix: string;
+    worktreeRootName: string;
+  };
   preferredScriptId: string | null;
   keybindings: ResolvedKeybindingsConfig;
   availableEditors: ReadonlyArray<EditorId>;
@@ -34,6 +42,7 @@ interface ChatHeaderProps {
   onAddProjectScript: (input: NewProjectScriptInput) => Promise<void>;
   onUpdateProjectScript: (scriptId: string, input: NewProjectScriptInput) => Promise<void>;
   onDeleteProjectScript: (scriptId: string) => Promise<void>;
+  onUpdateProjectGitNaming: (gitNaming: ProjectGitNamingSettings) => Promise<void>;
   onToggleDiff: () => void;
 }
 
@@ -45,6 +54,8 @@ export const ChatHeader = memo(function ChatHeader({
   isGitRepo,
   openInCwd,
   activeProjectScripts,
+  activeProjectGitNaming,
+  effectiveGitNaming,
   preferredScriptId,
   keybindings,
   availableEditors,
@@ -55,6 +66,7 @@ export const ChatHeader = memo(function ChatHeader({
   onAddProjectScript,
   onUpdateProjectScript,
   onDeleteProjectScript,
+  onUpdateProjectGitNaming,
   onToggleDiff,
 }: ChatHeaderProps) {
   return (
@@ -90,6 +102,13 @@ export const ChatHeader = memo(function ChatHeader({
             onDeleteScript={onDeleteProjectScript}
           />
         )}
+        {activeProjectGitNaming && (
+          <ProjectGitNamingControl
+            gitNaming={activeProjectGitNaming}
+            effectiveGitNaming={effectiveGitNaming}
+            onSave={onUpdateProjectGitNaming}
+          />
+        )}
         <ModelUsagePopover threadId={activeThreadId} activities={activeThreadActivities} />
         {activeProjectName && (
           <OpenInPicker
@@ -98,7 +117,13 @@ export const ChatHeader = memo(function ChatHeader({
             openInCwd={openInCwd}
           />
         )}
-        {activeProjectName && <GitActionsControl gitCwd={gitCwd} activeThreadId={activeThreadId} />}
+        {activeProjectName && (
+          <GitActionsControl
+            gitCwd={gitCwd}
+            activeThreadId={activeThreadId}
+            featureBranchPrefix={effectiveGitNaming.featureBranchPrefix}
+          />
+        )}
         <Tooltip>
           <TooltipTrigger
             render={
