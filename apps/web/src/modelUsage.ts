@@ -279,6 +279,36 @@ export function formatRateLimitPercent(value: number | null): string {
   return `${value.toFixed(value >= 10 ? 0 : 1)}%`;
 }
 
+export function formatResetCountdown(resetsAt: string | null, now = Date.now()): string | null {
+  if (!resetsAt) {
+    return null;
+  }
+
+  const resetTime = new Date(resetsAt).getTime();
+  if (Number.isNaN(resetTime)) {
+    return null;
+  }
+
+  const remainingMs = Math.max(0, resetTime - now);
+  if (remainingMs < 60_000) {
+    return "Resets now";
+  }
+
+  const hourMs = 60 * 60 * 1000;
+  if (remainingMs >= 48 * hourMs) {
+    const remainingDays = Math.ceil(remainingMs / (24 * 60 * 60 * 1000));
+    return `Resets in ${remainingDays} day${remainingDays === 1 ? "" : "s"}`;
+  }
+
+  if (remainingMs >= hourMs) {
+    const remainingHours = Math.ceil(remainingMs / hourMs);
+    return `Resets in ${remainingHours} hour${remainingHours === 1 ? "" : "s"}`;
+  }
+
+  const remainingMinutes = Math.ceil(remainingMs / 60_000);
+  return `Resets in ${remainingMinutes} min`;
+}
+
 export function summarizeRateLimitPair(snapshot: RateLimitSnapshotSummary | null): string {
   if (!snapshot) {
     return "No data";

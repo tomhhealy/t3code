@@ -4,6 +4,7 @@ import { ChartNoAxesColumnIcon, RefreshCcwIcon } from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
+  formatResetCountdown,
   getRateLimitSnapshot,
   getLatestModelUsage,
   getModelUsageFromRateLimits,
@@ -61,6 +62,10 @@ function formatRefreshError(error: unknown): string {
   return firstLine.replace(/^Error:\s*/, "");
 }
 
+function getInitialCountdownTime(): number {
+  return Date.now();
+}
+
 export const ModelUsagePopover = memo(function ModelUsagePopover({
   threadId,
   activities,
@@ -76,6 +81,7 @@ export const ModelUsagePopover = memo(function ModelUsagePopover({
   } | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshError, setRefreshError] = useState<string | null>(null);
+  const [countdownNow, setCountdownNow] = useState(getInitialCountdownTime);
   const autoRefreshThreadIdRef = useRef<ThreadId | null>(null);
 
   const entries = useMemo(
@@ -123,6 +129,28 @@ export const ModelUsagePopover = memo(function ModelUsagePopover({
     autoRefreshThreadIdRef.current = threadId;
     void refreshRateLimits({ silent: true });
   }, [refreshRateLimits, threadId]);
+
+  useEffect(() => {
+    const updateCountdown = () => {
+      setCountdownNow(Date.now());
+    };
+
+    updateCountdown();
+    const minuteMs = 60_000;
+    const timeoutMs = minuteMs - (Date.now() % minuteMs);
+    let intervalId: number | null = null;
+    const timeoutId = window.setTimeout(() => {
+      updateCountdown();
+      intervalId = window.setInterval(updateCountdown, minuteMs);
+    }, timeoutMs);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      if (intervalId !== null) {
+        window.clearInterval(intervalId);
+      }
+    };
+  }, []);
 
   return (
     <Popover>
@@ -188,6 +216,7 @@ export const ModelUsagePopover = memo(function ModelUsagePopover({
             ) : (
               entries.map((entry) => {
                 const resetTime = formatResetTime(entry.resetsAt);
+                const resetCountdown = formatResetCountdown(entry.resetsAt, countdownNow);
                 return (
                   <div
                     key={entry.id}
@@ -217,6 +246,18 @@ export const ModelUsagePopover = memo(function ModelUsagePopover({
                         </Badge>
                       </div>
                     </div>
+                    {resetCountdown && (
+                      <div className="mt-3">
+                        <div className="text-sm font-semibold text-foreground">
+                          {resetCountdown}
+                        </div>
+                        {resetTime && (
+                          <div className="mt-0.5 text-[11px] text-muted-foreground">
+                            {resetTime}
+                          </div>
+                        )}
+                      </div>
+                    )}
                     <div className="mt-3 h-2 overflow-hidden rounded-full bg-background/80">
                       <div
                         className={cn(
@@ -226,10 +267,10 @@ export const ModelUsagePopover = memo(function ModelUsagePopover({
                         style={{ width: `${entry.usedPercent ?? 0}%` }}
                       />
                     </div>
-                    {(entry.remainingText || resetTime) && (
+                    {(entry.remainingText || (resetTime && !resetCountdown)) && (
                       <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
                         {entry.remainingText && <span>{entry.remainingText} remaining</span>}
-                        {resetTime && <span>Resets {resetTime}</span>}
+                        {resetTime && !resetCountdown && <span>Resets {resetTime}</span>}
                       </div>
                     )}
                   </div>
