@@ -69,6 +69,7 @@ function createProviderServiceHarness() {
     listSessions: () => Effect.succeed([]),
     getCapabilities: () => Effect.succeed({ sessionModelSwitch: "in-session" }),
     rollbackConversation: () => unsupported(),
+    refreshRateLimits: () => unsupported(),
     streamEvents: Stream.fromPubSub(runtimeEventPubSub),
   };
 
@@ -1426,6 +1427,56 @@ describe("ProviderRuntimeIngestion", () => {
         (entry: ProviderRuntimeTestProposedPlan) => entry.id === "plan:thread-1:turn:turn-task-1",
       )?.planMarkdown,
     ).toBe("# Plan title");
+  });
+
+  it("projects account rate limit updates into thread activities", async () => {
+    const harness = await createHarness();
+    const now = new Date().toISOString();
+
+    harness.emit({
+      type: "account.rate-limits.updated",
+      eventId: asEventId("evt-rate-limits"),
+      provider: "codex",
+      createdAt: now,
+      threadId: asThreadId("thread-1"),
+      payload: {
+        rateLimits: {
+          limits: [
+            {
+              model: "gpt-5",
+              window: "5h",
+              used: 24,
+              limit: 80,
+            },
+          ],
+        },
+      },
+    });
+
+    const thread = await waitForThread(harness.engine, (entry) =>
+      entry.activities.some(
+        (activity: ProviderRuntimeTestActivity) => activity.id === "evt-rate-limits",
+      ),
+    );
+
+    const activity = thread.activities.find(
+      (entry: ProviderRuntimeTestActivity) => entry.id === "evt-rate-limits",
+    );
+
+    expect(activity?.kind).toBe("account.rate-limits.updated");
+    expect(activity?.summary).toBe("Model usage limits updated");
+    expect(activity?.payload).toMatchObject({
+      rateLimits: {
+        limits: [
+          {
+            model: "gpt-5",
+            window: "5h",
+            used: 24,
+            limit: 80,
+          },
+        ],
+      },
+    });
   });
 
   it("projects structured user input request and resolution as thread activities", async () => {

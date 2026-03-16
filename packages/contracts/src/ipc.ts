@@ -24,7 +24,31 @@ import type {
   ProjectWriteFileInput,
   ProjectWriteFileResult,
 } from "./project";
-import type { ServerConfig } from "./server";
+import type {
+  SkillsCheckUpdatesInput,
+  SkillsCheckUpdatesResult,
+  SkillsCreateInput,
+  SkillsCreateResult,
+  SkillsGetConfigInput,
+  SkillsInstallInput,
+  SkillsInstallResult,
+  SkillsListInstalledInput,
+  SkillsListInstalledResult,
+  SkillsReadFileInput,
+  SkillsReadFileResult,
+  SkillsResolvedConfig,
+  SkillsSearchRegistryInput,
+  SkillsSearchRegistryResult,
+  SkillsUpdateInput,
+  SkillsUpdateResult,
+  SkillsWriteFileInput,
+  SkillsWriteFileResult,
+} from "./skills";
+import type {
+  ServerConfig,
+  ServerRefreshRateLimitsInput,
+  ServerRefreshRateLimitsResult,
+} from "./server";
 import type {
   TerminalClearInput,
   TerminalCloseInput,
@@ -129,6 +153,17 @@ export interface NativeApi {
     searchEntries: (input: ProjectSearchEntriesInput) => Promise<ProjectSearchEntriesResult>;
     writeFile: (input: ProjectWriteFileInput) => Promise<ProjectWriteFileResult>;
   };
+  skills: {
+    getConfig: (input: SkillsGetConfigInput) => Promise<SkillsResolvedConfig>;
+    listInstalled: (input: SkillsListInstalledInput) => Promise<SkillsListInstalledResult>;
+    searchRegistry: (input: SkillsSearchRegistryInput) => Promise<SkillsSearchRegistryResult>;
+    install: (input: SkillsInstallInput) => Promise<SkillsInstallResult>;
+    checkUpdates: (input: SkillsCheckUpdatesInput) => Promise<SkillsCheckUpdatesResult>;
+    update: (input: SkillsUpdateInput) => Promise<SkillsUpdateResult>;
+    create: (input: SkillsCreateInput) => Promise<SkillsCreateResult>;
+    readFile: (input: SkillsReadFileInput) => Promise<SkillsReadFileResult>;
+    writeFile: (input: SkillsWriteFileInput) => Promise<SkillsWriteFileResult>;
+  };
   shell: {
     openInEditor: (cwd: string, editor: EditorId) => Promise<void>;
     openExternal: (url: string) => Promise<void>;
@@ -159,6 +194,9 @@ export interface NativeApi {
   server: {
     getConfig: () => Promise<ServerConfig>;
     upsertKeybinding: (input: ServerUpsertKeybindingInput) => Promise<ServerUpsertKeybindingResult>;
+    refreshRateLimits: (
+      input: ServerRefreshRateLimitsInput,
+    ) => Promise<ServerRefreshRateLimitsResult>;
   };
   orchestration: {
     getSnapshot: () => Promise<OrchestrationReadModel>;

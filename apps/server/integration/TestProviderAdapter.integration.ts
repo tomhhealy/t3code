@@ -486,6 +486,13 @@ export const makeTestProviderAdapterHarness = (options?: MakeTestProviderAdapter
       hasSession,
       readThread,
       rollbackThread,
+      refreshRateLimits: () =>
+        Effect.succeed({
+          rateLimits: {},
+          fetchedAt: new Date().toISOString(),
+          cooldownExpiresAt: new Date().toISOString(),
+          cached: false,
+        }),
       stopAll,
       streamEvents: Stream.fromQueue(runtimeEvents),
     };

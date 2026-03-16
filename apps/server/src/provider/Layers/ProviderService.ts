@@ -495,6 +495,21 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
         });
       });
 
+    const refreshRateLimits: ProviderServiceShape["refreshRateLimits"] = (threadId) =>
+      Effect.gen(function* () {
+        const routed = yield* resolveRoutableSession({
+          threadId,
+          operation: "ProviderService.refreshRateLimits",
+          allowRecovery: true,
+        });
+        const result = yield* routed.adapter.refreshRateLimits(routed.threadId);
+        yield* analytics.record("provider.rate_limits.refreshed", {
+          provider: routed.adapter.provider,
+          cached: result.cached,
+        });
+        return result;
+      });
+
     const runStopAll = () =>
       Effect.gen(function* () {
         const threadIds = yield* directory.listThreadIds();
@@ -537,6 +552,7 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
       listSessions,
       getCapabilities,
       rollbackConversation,
+      refreshRateLimits,
       // Each access creates a fresh PubSub subscription so that multiple
       // consumers (ProviderRuntimeIngestion, CheckpointReactor, etc.) each
       // independently receive all runtime events.

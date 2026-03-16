@@ -171,6 +171,15 @@ function makeFakeCodexAdapter(provider: ProviderKind = "codex") {
         sessions.clear();
       }),
   );
+  const refreshRateLimits = vi.fn(
+    (_threadId: ThreadId): Effect.Effect<any, ProviderAdapterError> =>
+      Effect.succeed({
+        rateLimits: {},
+        fetchedAt: new Date().toISOString(),
+        cooldownExpiresAt: new Date().toISOString(),
+        cached: false,
+      }),
+  );
 
   const adapter: ProviderAdapterShape<ProviderAdapterError> = {
     provider,
@@ -187,6 +196,7 @@ function makeFakeCodexAdapter(provider: ProviderKind = "codex") {
     hasSession,
     readThread,
     rollbackThread,
+    refreshRateLimits,
     stopAll,
     streamEvents: Stream.fromPubSub(runtimeEventPubSub),
   };
@@ -208,6 +218,7 @@ function makeFakeCodexAdapter(provider: ProviderKind = "codex") {
     hasSession,
     readThread,
     rollbackThread,
+    refreshRateLimits,
     stopAll,
   };
 }

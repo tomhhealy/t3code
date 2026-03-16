@@ -24,6 +24,7 @@ import type {
   ThreadId,
   ProviderTurnStartResult,
 } from "@t3tools/contracts";
+import type { ServerRefreshRateLimitsResult } from "@t3tools/contracts";
 import { ServiceMap } from "effect";
 import type { Effect, Stream } from "effect";
 
@@ -98,6 +99,13 @@ export interface ProviderServiceShape {
     readonly threadId: ThreadId;
     readonly numTurns: number;
   }) => Effect.Effect<void, ProviderServiceError>;
+
+  /**
+   * Fetch account rate limits for the active provider account with service-side routing.
+   */
+  readonly refreshRateLimits: (
+    threadId: ThreadId,
+  ) => Effect.Effect<ServerRefreshRateLimitsResult, ProviderServiceError>;
 
   /**
    * Canonical provider runtime event stream.

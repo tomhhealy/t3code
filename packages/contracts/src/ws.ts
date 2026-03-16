@@ -12,6 +12,17 @@ import {
   OrchestrationReplayEventsInput,
 } from "./orchestration";
 import {
+  SkillsCheckUpdatesInput,
+  SkillsCreateInput,
+  SkillsGetConfigInput,
+  SkillsInstallInput,
+  SkillsListInstalledInput,
+  SkillsReadFileInput,
+  SkillsSearchRegistryInput,
+  SkillsUpdateInput,
+  SkillsWriteFileInput,
+} from "./skills";
+import {
   GitCheckoutInput,
   GitCreateBranchInput,
   GitPreparePullRequestThreadInput,
@@ -36,7 +47,7 @@ import {
 import { KeybindingRule } from "./keybindings";
 import { ProjectSearchEntriesInput, ProjectWriteFileInput } from "./project";
 import { OpenInEditorInput } from "./editor";
-import { ServerConfigUpdatedPayload } from "./server";
+import { ServerConfigUpdatedPayload, ServerRefreshRateLimitsInput } from "./server";
 
 // ── WebSocket RPC Method Names ───────────────────────────────────────
 
@@ -47,6 +58,15 @@ export const WS_METHODS = {
   projectsRemove: "projects.remove",
   projectsSearchEntries: "projects.searchEntries",
   projectsWriteFile: "projects.writeFile",
+  skillsGetConfig: "skills.getConfig",
+  skillsListInstalled: "skills.listInstalled",
+  skillsSearchRegistry: "skills.searchRegistry",
+  skillsInstall: "skills.install",
+  skillsCheckUpdates: "skills.checkUpdates",
+  skillsUpdate: "skills.update",
+  skillsCreate: "skills.create",
+  skillsReadFile: "skills.readFile",
+  skillsWriteFile: "skills.writeFile",
 
   // Shell methods
   shellOpenInEditor: "shell.openInEditor",
@@ -75,6 +95,7 @@ export const WS_METHODS = {
   // Server meta
   serverGetConfig: "server.getConfig",
   serverUpsertKeybinding: "server.upsertKeybinding",
+  serverRefreshRateLimits: "server.refreshRateLimits",
 } as const;
 
 // ── Push Event Channels ──────────────────────────────────────────────
@@ -111,6 +132,15 @@ const WebSocketRequestBody = Schema.Union([
   // Project Search
   tagRequestBody(WS_METHODS.projectsSearchEntries, ProjectSearchEntriesInput),
   tagRequestBody(WS_METHODS.projectsWriteFile, ProjectWriteFileInput),
+  tagRequestBody(WS_METHODS.skillsGetConfig, SkillsGetConfigInput),
+  tagRequestBody(WS_METHODS.skillsListInstalled, SkillsListInstalledInput),
+  tagRequestBody(WS_METHODS.skillsSearchRegistry, SkillsSearchRegistryInput),
+  tagRequestBody(WS_METHODS.skillsInstall, SkillsInstallInput),
+  tagRequestBody(WS_METHODS.skillsCheckUpdates, SkillsCheckUpdatesInput),
+  tagRequestBody(WS_METHODS.skillsUpdate, SkillsUpdateInput),
+  tagRequestBody(WS_METHODS.skillsCreate, SkillsCreateInput),
+  tagRequestBody(WS_METHODS.skillsReadFile, SkillsReadFileInput),
+  tagRequestBody(WS_METHODS.skillsWriteFile, SkillsWriteFileInput),
 
   // Shell methods
   tagRequestBody(WS_METHODS.shellOpenInEditor, OpenInEditorInput),
@@ -139,6 +169,7 @@ const WebSocketRequestBody = Schema.Union([
   // Server meta
   tagRequestBody(WS_METHODS.serverGetConfig, Schema.Struct({})),
   tagRequestBody(WS_METHODS.serverUpsertKeybinding, KeybindingRule),
+  tagRequestBody(WS_METHODS.serverRefreshRateLimits, ServerRefreshRateLimitsInput),
 ]);
 
 export const WebSocketRequest = Schema.Struct({

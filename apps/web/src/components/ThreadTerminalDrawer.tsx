@@ -46,6 +46,18 @@ function writeSystemMessage(terminal: Terminal, message: string): void {
   terminal.write(`\r\n[terminal] ${message}\r\n`);
 }
 
+function terminalFontFamilyFromApp(): string {
+  if (typeof window === "undefined") {
+    return '"JetBrains Mono Nerd Font", "JetBrainsMono Nerd Font", "JetBrainsMonoNerdFont", monospace';
+  }
+
+  const rootStyles = getComputedStyle(document.documentElement);
+  const fontFamily = rootStyles.getPropertyValue("--font-mono-terminal").trim();
+  return fontFamily.length > 0
+    ? fontFamily
+    : '"JetBrains Mono Nerd Font", "JetBrainsMono Nerd Font", "JetBrainsMonoNerdFont", monospace';
+}
+
 function terminalThemeFromApp(): ITheme {
   const isDark = document.documentElement.classList.contains("dark");
   const bodyStyles = getComputedStyle(document.body);
@@ -151,10 +163,13 @@ function TerminalViewport({
     const fitAddon = new FitAddon();
     const terminal = new Terminal({
       cursorBlink: true,
-      lineHeight: 1.2,
+      lineHeight: 1,
+      letterSpacing: 0,
       fontSize: 12,
+      fontWeight: "400",
+      fontWeightBold: "400",
       scrollback: 5_000,
-      fontFamily: '"SF Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace',
+      fontFamily: terminalFontFamilyFromApp(),
       theme: terminalThemeFromApp(),
     });
     terminal.loadAddon(fitAddon);
@@ -397,6 +412,34 @@ function TerminalViewport({
     // it is only read at mount time and must not trigger terminal teardown/recreation.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cwd, runtimeEnv, terminalId, threadId]);
+
+  useEffect(() => {
+    const terminal = terminalRef.current;
+    const fitAddon = fitAddonRef.current;
+    if (!terminal || !fitAddon || typeof document === "undefined" || !("fonts" in document)) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const applyLoadedFonts = () => {
+      if (cancelled) return;
+      const activeTerminal = terminalRef.current;
+      const activeFitAddon = fitAddonRef.current;
+      if (!activeTerminal || !activeFitAddon) return;
+      activeTerminal.options.fontFamily = terminalFontFamilyFromApp();
+      activeFitAddon.fit();
+      activeTerminal.refresh(0, activeTerminal.rows - 1);
+    };
+
+    void document.fonts.ready.then(applyLoadedFonts);
+    document.fonts.addEventListener("loadingdone", applyLoadedFonts);
+
+    return () => {
+      cancelled = true;
+      document.fonts.removeEventListener("loadingdone", applyLoadedFonts);
+    };
+  }, []);
 
   useEffect(() => {
     if (!autoFocus) return;

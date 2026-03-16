@@ -115,6 +115,17 @@ export function createWsNativeApi(): NativeApi {
       searchEntries: (input) => transport.request(WS_METHODS.projectsSearchEntries, input),
       writeFile: (input) => transport.request(WS_METHODS.projectsWriteFile, input),
     },
+    skills: {
+      getConfig: (input) => transport.request(WS_METHODS.skillsGetConfig, input),
+      listInstalled: (input) => transport.request(WS_METHODS.skillsListInstalled, input),
+      searchRegistry: (input) => transport.request(WS_METHODS.skillsSearchRegistry, input),
+      install: (input) => transport.request(WS_METHODS.skillsInstall, input),
+      checkUpdates: (input) => transport.request(WS_METHODS.skillsCheckUpdates, input),
+      update: (input) => transport.request(WS_METHODS.skillsUpdate, input),
+      create: (input) => transport.request(WS_METHODS.skillsCreate, input),
+      readFile: (input) => transport.request(WS_METHODS.skillsReadFile, input),
+      writeFile: (input) => transport.request(WS_METHODS.skillsWriteFile, input),
+    },
     shell: {
       openInEditor: (cwd, editor) =>
         transport.request(WS_METHODS.shellOpenInEditor, { cwd, editor }),
@@ -160,6 +171,7 @@ export function createWsNativeApi(): NativeApi {
     server: {
       getConfig: () => transport.request(WS_METHODS.serverGetConfig),
       upsertKeybinding: (input) => transport.request(WS_METHODS.serverUpsertKeybinding, input),
+      refreshRateLimits: (input) => transport.request(WS_METHODS.serverRefreshRateLimits, input),
     },
     orchestration: {
       getSnapshot: () => transport.request(ORCHESTRATION_WS_METHODS.getSnapshot),

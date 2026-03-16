@@ -8,6 +8,7 @@ import {
   EventId,
   ProviderItemId,
   ProviderRequestKind,
+  type ServerRefreshRateLimitsResult,
   type ProviderUserInputAnswers,
   ThreadId,
   TurnId,
@@ -72,6 +73,12 @@ interface CodexSessionContext {
   pendingUserInputs: Map<ApprovalRequestId, PendingUserInputRequest>;
   nextRequestId: number;
   stopping: boolean;
+}
+
+interface RateLimitsCacheEntry {
+  readonly rateLimits: unknown;
+  readonly fetchedAt: string;
+  readonly cooldownExpiresAt: string;
 }
 
 interface JsonRpcError {
@@ -145,6 +152,7 @@ export interface CodexThreadSnapshot {
 }
 
 const CODEX_VERSION_CHECK_TIMEOUT_MS = 4_000;
+const RATE_LIMITS_REFRESH_COOLDOWN_MS = 60_000;
 
 const ANSI_ESCAPE_CHAR = String.fromCharCode(27);
 const ANSI_ESCAPE_REGEX = new RegExp(`${ANSI_ESCAPE_CHAR}\\[[0-9;]*m`, "g");
@@ -514,6 +522,7 @@ export interface CodexAppServerManagerEvents {
 
 export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEvents> {
   private readonly sessions = new Map<ThreadId, CodexSessionContext>();
+  private rateLimitsCache: RateLimitsCacheEntry | null = null;
 
   private runPromise: (effect: Effect.Effect<unknown, never>) => Promise<unknown>;
   constructor(services?: ServiceMap.ServiceMap<never>) {
@@ -894,6 +903,61 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       activeTurnId: undefined,
     });
     return this.parseThreadSnapshot("thread/rollback", response);
+  }
+
+  async refreshRateLimits(threadId: ThreadId): Promise<ServerRefreshRateLimitsResult> {
+    const context = this.requireSession(threadId);
+    const nowMs = Date.now();
+    const cached = this.rateLimitsCache;
+
+    if (cached) {
+      const cooldownMs = Date.parse(cached.cooldownExpiresAt);
+      if (Number.isFinite(cooldownMs) && cooldownMs > nowMs) {
+        return {
+          rateLimits: cached.rateLimits,
+          fetchedAt: cached.fetchedAt,
+          cooldownExpiresAt: cached.cooldownExpiresAt,
+          cached: true,
+        };
+      }
+    }
+
+    const response = await this.sendRequest<{
+      rateLimits?: unknown;
+      rate_limits?: unknown;
+    }>(context, "account/rateLimits/read", {});
+    const rateLimits =
+      this.readObject(response, "rateLimits") ??
+      this.readObject(response, "rate_limits") ??
+      this.readObject(response) ??
+      response;
+    const fetchedAt = new Date(nowMs).toISOString();
+    const cooldownExpiresAt = new Date(nowMs + RATE_LIMITS_REFRESH_COOLDOWN_MS).toISOString();
+
+    this.rateLimitsCache = {
+      rateLimits,
+      fetchedAt,
+      cooldownExpiresAt,
+    };
+
+    this.emitEvent({
+      id: EventId.makeUnsafe(randomUUID()),
+      kind: "notification",
+      provider: "codex",
+      threadId: context.session.threadId,
+      createdAt: fetchedAt,
+      method: "account/rateLimits/updated",
+      payload: {
+        rateLimits,
+      },
+    });
+
+    return {
+      rateLimits,
+      fetchedAt,
+      cooldownExpiresAt,
+      cached: false,
+    };
   }
 
   async respondToRequest(

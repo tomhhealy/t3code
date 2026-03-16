@@ -1,5 +1,5 @@
 import { Schema } from "effect";
-import { IsoDateTime, TrimmedNonEmptyString } from "./baseSchemas";
+import { IsoDateTime, ThreadId, TrimmedNonEmptyString } from "./baseSchemas";
 import { KeybindingRule, ResolvedKeybindingsConfig } from "./keybindings";
 import { EditorId } from "./editor";
 import { ProviderKind } from "./orchestration";
@@ -69,3 +69,16 @@ export const ServerConfigUpdatedPayload = Schema.Struct({
   providers: ServerProviderStatuses,
 });
 export type ServerConfigUpdatedPayload = typeof ServerConfigUpdatedPayload.Type;
+
+export const ServerRefreshRateLimitsInput = Schema.Struct({
+  threadId: ThreadId,
+});
+export type ServerRefreshRateLimitsInput = typeof ServerRefreshRateLimitsInput.Type;
+
+export const ServerRefreshRateLimitsResult = Schema.Struct({
+  rateLimits: Schema.Unknown,
+  fetchedAt: IsoDateTime,
+  cooldownExpiresAt: IsoDateTime,
+  cached: Schema.Boolean,
+});
+export type ServerRefreshRateLimitsResult = typeof ServerRefreshRateLimitsResult.Type;

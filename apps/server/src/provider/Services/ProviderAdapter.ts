@@ -11,8 +11,8 @@ import type {
   ApprovalRequestId,
   ProviderApprovalDecision,
   ProviderKind,
-  ProviderUserInputAnswers,
   ProviderRuntimeEvent,
+  ProviderUserInputAnswers,
   ProviderSendTurnInput,
   ProviderSession,
   ProviderSessionStartInput,
@@ -22,6 +22,7 @@ import type {
 } from "@t3tools/contracts";
 import type { Effect } from "effect";
 import type { Stream } from "effect";
+import type { ServerRefreshRateLimitsResult } from "@t3tools/contracts";
 
 export type ProviderSessionModelSwitchMode = "in-session" | "restart-session" | "unsupported";
 
@@ -113,6 +114,13 @@ export interface ProviderAdapterShape<TError> {
     threadId: ThreadId,
     numTurns: number,
   ) => Effect.Effect<ProviderThreadSnapshot, TError>;
+
+  /**
+   * Fetch account rate limits for the active provider account with adapter-side throttling.
+   */
+  readonly refreshRateLimits: (
+    threadId: ThreadId,
+  ) => Effect.Effect<ServerRefreshRateLimitsResult, TError>;
 
   /**
    * Stop all sessions owned by this adapter.

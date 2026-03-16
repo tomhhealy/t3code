@@ -1,23 +1,26 @@
 import {
   type EditorId,
+  type OrchestrationThreadActivity,
   type ProjectScript,
   type ResolvedKeybindingsConfig,
   type ThreadId,
 } from "@t3tools/contracts";
+import { DiffIcon } from "lucide-react";
 import { memo } from "react";
 import GitActionsControl from "../GitActionsControl";
-import { DiffIcon } from "lucide-react";
-import { Badge } from "../ui/badge";
-import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import ProjectScriptsControl, { type NewProjectScriptInput } from "../ProjectScriptsControl";
-import { Toggle } from "../ui/toggle";
+import { Badge } from "../ui/badge";
 import { SidebarTrigger } from "../ui/sidebar";
+import { Toggle } from "../ui/toggle";
+import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
+import { ModelUsagePopover } from "./ModelUsagePopover";
 import { OpenInPicker } from "./OpenInPicker";
 
 interface ChatHeaderProps {
   activeThreadId: ThreadId;
   activeThreadTitle: string;
   activeProjectName: string | undefined;
+  activeThreadActivities: ReadonlyArray<OrchestrationThreadActivity>;
   isGitRepo: boolean;
   openInCwd: string | null;
   activeProjectScripts: ProjectScript[] | undefined;
@@ -38,6 +41,7 @@ export const ChatHeader = memo(function ChatHeader({
   activeThreadId,
   activeThreadTitle,
   activeProjectName,
+  activeThreadActivities,
   isGitRepo,
   openInCwd,
   activeProjectScripts,
@@ -86,6 +90,7 @@ export const ChatHeader = memo(function ChatHeader({
             onDeleteScript={onDeleteProjectScript}
           />
         )}
+        <ModelUsagePopover threadId={activeThreadId} activities={activeThreadActivities} />
         {activeProjectName && (
           <OpenInPicker
             keybindings={keybindings}

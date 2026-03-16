@@ -78,6 +78,17 @@ import { expandHomePath } from "./os-jank.ts";
 import { makeServerPushBus } from "./wsServer/pushBus.ts";
 import { makeServerReadiness } from "./wsServer/readiness.ts";
 import { decodeJsonResult, formatSchemaError } from "@t3tools/shared/schemaJson";
+import {
+  checkSkillUpdates,
+  createSkill,
+  getSkillsConfig,
+  installSkill,
+  listInstalledSkills,
+  readSkillFile,
+  searchRegistrySkills,
+  updateSkills,
+  writeSkillFile,
+} from "./skills";
 
 /**
  * ServerShape - Service API for server lifecycle control.
@@ -253,6 +264,7 @@ export const createServer = Effect.fn(function* (): Effect.fn.Return<
   const gitManager = yield* GitManager;
   const terminalManager = yield* TerminalManager;
   const keybindingsManager = yield* Keybindings;
+  const providerService = yield* ProviderService;
   const providerHealth = yield* ProviderHealth;
   const git = yield* GitCore;
   const fileSystem = yield* FileSystem.FileSystem;
@@ -776,6 +788,106 @@ export const createServer = Effect.fn(function* (): Effect.fn.Return<
         return { relativePath: target.relativePath };
       }
 
+      case WS_METHODS.skillsGetConfig: {
+        const body = stripRequestTag(request.body);
+        return yield* Effect.tryPromise({
+          try: () => getSkillsConfig(body),
+          catch: (cause) =>
+            new RouteRequestError({
+              message:
+                cause instanceof Error ? cause.message : "Failed to resolve skills configuration.",
+            }),
+        });
+      }
+
+      case WS_METHODS.skillsListInstalled: {
+        const body = stripRequestTag(request.body);
+        return yield* Effect.tryPromise({
+          try: () => listInstalledSkills(body),
+          catch: (cause) =>
+            new RouteRequestError({
+              message: cause instanceof Error ? cause.message : "Failed to list installed skills.",
+            }),
+        });
+      }
+
+      case WS_METHODS.skillsSearchRegistry: {
+        const body = stripRequestTag(request.body);
+        return yield* Effect.tryPromise({
+          try: () => searchRegistrySkills(body),
+          catch: (cause) =>
+            new RouteRequestError({
+              message: cause instanceof Error ? cause.message : "Failed to search skills registry.",
+            }),
+        });
+      }
+
+      case WS_METHODS.skillsInstall: {
+        const body = stripRequestTag(request.body);
+        return yield* Effect.tryPromise({
+          try: () => installSkill(body),
+          catch: (cause) =>
+            new RouteRequestError({
+              message: cause instanceof Error ? cause.message : "Failed to install skill.",
+            }),
+        });
+      }
+
+      case WS_METHODS.skillsCheckUpdates: {
+        const body = stripRequestTag(request.body);
+        return yield* Effect.tryPromise({
+          try: () => checkSkillUpdates(body),
+          catch: (cause) =>
+            new RouteRequestError({
+              message: cause instanceof Error ? cause.message : "Failed to check skill updates.",
+            }),
+        });
+      }
+
+      case WS_METHODS.skillsUpdate: {
+        const body = stripRequestTag(request.body);
+        return yield* Effect.tryPromise({
+          try: () => updateSkills(body),
+          catch: (cause) =>
+            new RouteRequestError({
+              message: cause instanceof Error ? cause.message : "Failed to update skills.",
+            }),
+        });
+      }
+
+      case WS_METHODS.skillsCreate: {
+        const body = stripRequestTag(request.body);
+        return yield* Effect.tryPromise({
+          try: () => createSkill(body),
+          catch: (cause) =>
+            new RouteRequestError({
+              message: cause instanceof Error ? cause.message : "Failed to create skill.",
+            }),
+        });
+      }
+
+      case WS_METHODS.skillsReadFile: {
+        const body = stripRequestTag(request.body);
+        return yield* Effect.tryPromise({
+          try: () => readSkillFile(body),
+          catch: (cause) =>
+            new RouteRequestError({
+              message: cause instanceof Error ? cause.message : "Failed to read skill file.",
+            }),
+        });
+      }
+
+      case WS_METHODS.skillsWriteFile: {
+        const body = stripRequestTag(request.body);
+        return yield* Effect.tryPromise({
+          try: () => writeSkillFile(body),
+          catch: (cause) =>
+            new RouteRequestError({
+              message: cause instanceof Error ? cause.message : "Failed to write skill file.",
+            }),
+        });
+      }
+
       case WS_METHODS.shellOpenInEditor: {
         const body = stripRequestTag(request.body);
         return yield* openInEditor(body);
@@ -881,6 +993,11 @@ export const createServer = Effect.fn(function* (): Effect.fn.Return<
         const body = stripRequestTag(request.body);
         const keybindingsConfig = yield* keybindingsManager.upsertKeybindingRule(body);
         return { keybindings: keybindingsConfig, issues: [] };
+      }
+
+      case WS_METHODS.serverRefreshRateLimits: {
+        const body = stripRequestTag(request.body);
+        return yield* providerService.refreshRateLimits(body.threadId);
       }
 
       default: {

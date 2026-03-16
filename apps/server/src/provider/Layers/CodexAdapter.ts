@@ -1422,6 +1422,12 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
       );
     };
 
+    const refreshRateLimits: CodexAdapterShape["refreshRateLimits"] = (threadId) =>
+      Effect.tryPromise({
+        try: () => manager.refreshRateLimits(threadId),
+        catch: (cause) => toRequestError(threadId, "account/rateLimits/read", cause),
+      });
+
     const respondToRequest: CodexAdapterShape["respondToRequest"] = (
       threadId,
       requestId,
@@ -1508,6 +1514,7 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
       interruptTurn,
       readThread,
       rollbackThread,
+      refreshRateLimits,
       respondToRequest,
       respondToUserInput,
       stopSession,
