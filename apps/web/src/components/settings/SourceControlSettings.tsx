@@ -1,7 +1,7 @@
 import { ChevronDownIcon, GitPullRequestIcon, RefreshCwIcon } from "lucide-react";
 import * as Duration from "effect/Duration";
 import * as Option from "effect/Option";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type {
   BackgroundActivitySettings,
   SourceControlProviderKind,
@@ -11,6 +11,7 @@ import type {
   VcsDriverKind,
   VcsDiscoveryItem,
 } from "@t3tools/contracts";
+import { normalizeWorktreeBranchPrefix, WORKTREE_BRANCH_PREFIX } from "@t3tools/shared/git";
 import {
   getBackgroundActivityBaseProfile,
   getBackgroundActivityPresetSettings,
@@ -34,6 +35,7 @@ import {
   EmptyTitle,
 } from "../ui/empty";
 import { Skeleton } from "../ui/skeleton";
+import { Input } from "../ui/input";
 import {
   NumberField,
   NumberFieldDecrement,
@@ -59,6 +61,7 @@ import {
   PolicyTooltip,
   SettingResetButton,
   SettingsPageContainer,
+  SettingsRow,
   SettingsSection,
 } from "./settingsLayout";
 import { searchableSetting } from "./settingsSearch";
@@ -410,6 +413,56 @@ function GitFetchIntervalSettings() {
   );
 }
 
+function WorktreeBranchPrefixSettings() {
+  const settings = usePrimarySettings();
+  const updateSettings = useUpdatePrimarySettings();
+  const [draftPrefix, setDraftPrefix] = useState(settings.worktreeBranchPrefix);
+
+  useEffect(() => {
+    setDraftPrefix(settings.worktreeBranchPrefix);
+  }, [settings.worktreeBranchPrefix]);
+
+  const commitDraft = () => {
+    const worktreeBranchPrefix = normalizeWorktreeBranchPrefix(draftPrefix);
+    setDraftPrefix(worktreeBranchPrefix);
+    if (worktreeBranchPrefix !== settings.worktreeBranchPrefix) {
+      updateSettings({ worktreeBranchPrefix });
+    }
+  };
+
+  return (
+    <SettingsSection title="Worktrees">
+      <SettingsRow
+        {...searchableSetting("worktree-branch-prefix")}
+        description="Prefix for temporary and generated worktree branches. Leave empty to use t3code/."
+        control={
+          <div className="flex w-full items-center gap-1.5 sm:w-72">
+            <Input
+              aria-label="Worktree branch prefix"
+              value={draftPrefix}
+              placeholder={`${WORKTREE_BRANCH_PREFIX}/`}
+              onChange={(event) => setDraftPrefix(event.currentTarget.value)}
+              onBlur={commitDraft}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") event.currentTarget.blur();
+              }}
+            />
+            {settings.worktreeBranchPrefix ? (
+              <SettingResetButton
+                label="worktree branch prefix"
+                onClick={() => {
+                  setDraftPrefix("");
+                  updateSettings({ worktreeBranchPrefix: "" });
+                }}
+              />
+            ) : null}
+          </div>
+        }
+      />
+    </SettingsSection>
+  );
+}
+
 function SourceControlSectionSkeleton({
   title,
   headerAction,
@@ -580,6 +633,7 @@ export function SourceControlSettingsPanel() {
         />
       )}
 
+      {isPrimaryEnvironment ? <WorktreeBranchPrefixSettings /> : null}
       {isPrimaryEnvironment ? <SourceControlWritingSettingsSection /> : null}
     </SettingsPageContainer>
   );

@@ -63,6 +63,10 @@ The **Source Control settings** page shows you exactly what's connected:
 
 Run a quick **Rescan** after setting up a new machine or changing credentials.
 
+You can also set a custom branch prefix for new worktrees. T3 Code uses it for the temporary branch
+and keeps it when the branch receives its generated name after the first message. Leave the setting
+empty to use `t3code/`. Existing branches are not renamed when you change the setting.
+
 ## Getting Started
 
 ### For GitHub (Recommended for most users)

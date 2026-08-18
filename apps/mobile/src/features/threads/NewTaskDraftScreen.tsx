@@ -21,6 +21,7 @@ import {
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
 } from "@t3tools/client-runtime/state/runtime";
+import { resolveWorktreeBranchPrefix, WORKTREE_BRANCH_PREFIX } from "@t3tools/shared/git";
 
 import { ComposerEditor, type ComposerEditorHandle } from "../../components/ComposerEditor";
 import {
@@ -735,6 +736,10 @@ export function NewTaskDraftScreen(props: {
       branch: creationBranch,
       worktreePath: workspaceMode === "worktree" ? null : selectedWorktreePath,
       startFromOrigin,
+      worktreeBranchPrefix:
+        selectedEnvironmentServerConfig === null
+          ? WORKTREE_BRANCH_PREFIX
+          : resolveWorktreeBranchPrefix(selectedEnvironmentServerConfig.settings),
       runtimeMode,
       interactionMode,
       initialMessageText,

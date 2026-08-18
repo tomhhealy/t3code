@@ -3,10 +3,13 @@ import { describe, expect, it } from "vite-plus/test";
 
 import {
   applyGitStatusStreamEvent,
+  buildGeneratedWorktreeBranchName,
   buildTemporaryWorktreeBranchName,
   isTemporaryWorktreeBranch,
+  normalizeWorktreeBranchPrefix,
   normalizeGitRemoteUrl,
   parseGitHubRepositoryNameWithOwnerFromRemoteUrl,
+  resolveWorktreeBranchPrefix,
   WORKTREE_BRANCH_PREFIX,
 } from "./git.ts";
 
@@ -107,6 +110,35 @@ describe("isTemporaryWorktreeBranch", () => {
     expect(isTemporaryWorktreeBranch(`${WORKTREE_BRANCH_PREFIX}/feature/demo`)).toBe(false);
     expect(isTemporaryWorktreeBranch("main")).toBe(false);
     expect(isTemporaryWorktreeBranch(`${WORKTREE_BRANCH_PREFIX}/deadbeef-extra`)).toBe(false);
+  });
+
+  it("builds and recognizes temporary refs with a custom prefix", () => {
+    const branch = buildTemporaryWorktreeBranchName(() => "deadbeef", "Custom / Worktrees/");
+    expect(branch).toBe("custom/worktrees/deadbeef");
+    expect(isTemporaryWorktreeBranch(branch, "custom/worktrees")).toBe(true);
+    expect(isTemporaryWorktreeBranch(branch)).toBe(false);
+  });
+});
+
+describe("worktree branch prefix", () => {
+  it("normalizes invalid or empty prefixes", () => {
+    expect(normalizeWorktreeBranchPrefix(" refs/heads/Team Name/ ")).toBe("team-name");
+    expect(normalizeWorktreeBranchPrefix(" / ")).toBe("");
+  });
+
+  it("applies a custom prefix to generated semantic names", () => {
+    expect(buildGeneratedWorktreeBranchName("feature/Improve Search", "custom/worktrees/")).toBe(
+      "custom/worktrees/feature/improve-search",
+    );
+  });
+
+  it("uses the default prefix when the setting is empty", () => {
+    expect(resolveWorktreeBranchPrefix({ worktreeBranchPrefix: "" })).toBe(WORKTREE_BRANCH_PREFIX);
+    expect(
+      resolveWorktreeBranchPrefix({
+        worktreeBranchPrefix: "custom/worktrees",
+      }),
+    ).toBe("custom/worktrees");
   });
 });
 

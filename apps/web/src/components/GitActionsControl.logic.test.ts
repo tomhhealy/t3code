@@ -1102,6 +1102,16 @@ describe("resolveLiveThreadBranchUpdate", () => {
     assert.equal(update, null);
   });
 
+  it("recognizes a temporary worktree ref with the configured prefix", () => {
+    const update = resolveLiveThreadBranchUpdate({
+      threadBranch: "custom/worktrees/github-query-rate-limit",
+      gitStatus: status({ refName: "custom/worktrees/bda76797" }),
+      worktreeBranchPrefix: "custom/worktrees",
+    });
+
+    assert.equal(update, null);
+  });
+
   it("allows a temporary worktree ref to reconcile to a semantic branch", () => {
     const update = resolveLiveThreadBranchUpdate({
       threadBranch: "t3code/a9628676",

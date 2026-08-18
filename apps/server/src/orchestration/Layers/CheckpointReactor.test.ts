@@ -58,6 +58,7 @@ import {
 import { checkpointRefForThreadTurn } from "../../checkpointing/Utils.ts";
 import { ServerConfig } from "../../config.ts";
 import * as WorkspaceEntries from "../../workspace/WorkspaceEntries.ts";
+import { ServerSettingsService } from "../../serverSettings.ts";
 import * as WorkspacePaths from "../../workspace/WorkspacePaths.ts";
 
 const asProjectId = (value: string): ProjectId => ProjectId.make(value);
@@ -285,6 +286,7 @@ describe("CheckpointReactor", () => {
     readonly providerSessionCwd?: string;
     readonly providerName?: ProviderDriverKind;
     readonly gitStatusRefreshCalls?: Array<string>;
+    readonly worktreeBranchPrefix?: string;
   }) {
     const cwd = createGitRepository();
     tempDirs.push(cwd);
@@ -350,6 +352,15 @@ describe("CheckpointReactor", () => {
       Layer.provideMerge(WorkspacePaths.layer),
       Layer.provideMerge(VcsProcess.layer),
       Layer.provideMerge(ServerConfigLayer),
+      Layer.provideMerge(
+        ServerSettingsService.layerTest({
+          ...(options?.worktreeBranchPrefix
+            ? {
+                worktreeBranchPrefix: options.worktreeBranchPrefix,
+              }
+            : {}),
+        }),
+      ),
       Layer.provideMerge(NodeServices.layer),
     );
 
@@ -610,8 +621,9 @@ describe("CheckpointReactor", () => {
   it("does not adopt a temporary placeholder checkout as the thread branch", async () => {
     const harness = await createHarness({
       seedFilesystemCheckpoints: false,
-      threadBranch: "t3code/original-branch",
-      localStatusRefName: "t3code/0a1b2c3d",
+      worktreeBranchPrefix: "custom/worktrees",
+      threadBranch: "custom/worktrees/original-branch",
+      localStatusRefName: "custom/worktrees/0a1b2c3d",
     });
 
     harness.provider.emit({
@@ -628,7 +640,7 @@ describe("CheckpointReactor", () => {
 
     const snapshot = await harness.readModel();
     const thread = snapshot.threads.find((entry) => entry.id === ThreadId.make("thread-1"));
-    expect(thread?.branch).toBe("t3code/original-branch");
+    expect(thread?.branch).toBe("custom/worktrees/original-branch");
   });
 
   it("ignores auxiliary thread turn completion while primary turn is active", async () => {

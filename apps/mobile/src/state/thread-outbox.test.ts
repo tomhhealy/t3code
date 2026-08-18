@@ -566,6 +566,7 @@ describe("thread outbox", () => {
         branch: "main",
         worktreePath: null,
         startFromOrigin: true,
+        worktreeBranchPrefix: "custom/worktrees",
       },
     } satisfies QueuedThreadMessage;
 

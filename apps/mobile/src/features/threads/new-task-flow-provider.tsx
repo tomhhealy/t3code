@@ -18,6 +18,7 @@ import {
   ThreadId,
 } from "@t3tools/contracts";
 import { parseT3ProjectFile } from "@t3tools/shared/t3ProjectFile";
+import { resolveWorktreeBranchPrefix, WORKTREE_BRANCH_PREFIX } from "@t3tools/shared/git";
 import {
   isDefaultThreadEnvModeSettled,
   resolveDefaultThreadEnvMode,
@@ -889,6 +890,10 @@ export function NewTaskFlowProvider(props: React.PropsWithChildren) {
           ...((workspaceSelection?.startFromOrigin ?? startFromOrigin)
             ? { startFromOrigin: true }
             : {}),
+          worktreeBranchPrefix:
+            selectedEnvironmentServerConfig === null
+              ? WORKTREE_BRANCH_PREFIX
+              : resolveWorktreeBranchPrefix(selectedEnvironmentServerConfig.settings),
         },
         createdAt: metadata.createdAt,
       };

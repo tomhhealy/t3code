@@ -92,6 +92,7 @@ import { type DraftId, useComposerDraftStore } from "~/composerDraftStore";
 import { readLocalApi } from "~/localApi";
 import { getSourceControlPresentation } from "~/sourceControlPresentation";
 import { openPullRequestLink } from "~/lib/openPullRequestLink";
+import { resolveWorktreeBranchPrefix } from "@t3tools/shared/git";
 
 interface GitActionsControlProps {
   gitCwd: string | null;
@@ -1135,6 +1136,9 @@ export default function GitActionsControl({
     const branchUpdate = resolveLiveThreadBranchUpdate({
       threadBranch: activeDraftThread?.branch ?? null,
       gitStatus: gitStatusForActions,
+      ...(serverConfig
+        ? { worktreeBranchPrefix: resolveWorktreeBranchPrefix(serverConfig.settings) }
+        : {}),
     });
     if (!branchUpdate) {
       return;
@@ -1148,6 +1152,7 @@ export default function GitActionsControl({
     isGitActionRunning,
     isSelectingWorktreeBase,
     persistThreadBranchSync,
+    serverConfig?.settings.worktreeBranchPrefix,
   ]);
 
   const isDefaultRef = useMemo(() => {
